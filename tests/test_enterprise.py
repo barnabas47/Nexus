@@ -80,3 +80,23 @@ def test_playbook_execution():
     assert data["status"] == "success"
     assert len(data["steps_executed"]) == 4
     assert "consensus" in data
+
+def test_byok_settings():
+    # 1. Get settings
+    res = client.get("/api/settings/keys?tenant_id=tenant-cloudscale")
+    assert res.status_code == 200
+    settings = res.json()
+    assert "provider" in settings
+    assert "cache_enabled" in settings
+
+    # 2. Save settings
+    res_save = client.post("/api/settings/keys", json={
+        "tenant_id": "tenant-cloudscale",
+        "provider": "emulated",
+        "cache_enabled": True,
+        "tiering_enabled": True,
+        "max_output_tokens": 350
+    })
+    assert res_save.status_code == 200
+    assert res_save.json()["status"] == "saved"
+

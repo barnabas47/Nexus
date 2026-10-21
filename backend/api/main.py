@@ -8,6 +8,7 @@ from backend.api.webhooks import router as webhooks_router
 from backend.api.auth import router as auth_router
 from backend.api.roster import router as roster_router
 from backend.api.playbooks import router as playbooks_router
+from backend.api.settings import router as settings_router
 from backend.api.demo import JudgeDemoOrchestrator
 
 app = FastAPI(
@@ -29,6 +30,7 @@ app.include_router(webhooks_router)
 app.include_router(auth_router)
 app.include_router(roster_router)
 app.include_router(playbooks_router)
+app.include_router(settings_router)
 
 @app.on_event("startup")
 def startup_event():

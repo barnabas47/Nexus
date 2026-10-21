@@ -5,7 +5,7 @@ import {
   CheckCircle, Database, Globe, ShieldCheck, Zap,
   DollarSign, FileText, Network, Server, Lock, Layers,
   ChevronRight, ArrowRight, CornerDownRight, Check, X, Shield, RefreshCw,
-  Phone, Users, Plus, Trash2, Radio, Bell
+  Phone, Users, Plus, Trash2, Radio, Bell, Key, Sliders, CheckCircle2
 } from 'lucide-react';
 import { LiveAIInspector } from './components/ui/live-ai-inspector';
 
@@ -202,6 +202,16 @@ export default function App() {
   const [newContactChannel, setNewContactChannel] = useState<'sms' | 'whatsapp' | 'rcs' | 'voice'>('sms');
   const [newContactTier, setNewContactTier] = useState<'P1_CRITICAL' | 'P2_HIGH' | 'P3_STANDARD'>('P1_CRITICAL');
 
+  // BYOK & Token Optimizer Modal states
+  const [showKeyModal, setShowKeyModal] = useState(false);
+  const [keySettings, setKeySettings] = useState<any>(null);
+  const [providerChoice, setProviderChoice] = useState<'anthropic' | 'openai' | 'emulated'>('emulated');
+  const [apiKeyVal, setApiKeyVal] = useState('');
+  const [testResult, setTestResult] = useState<{ testing: boolean; success?: boolean; msg?: string } | null>(null);
+  const [cacheOpt, setCacheOpt] = useState(true);
+  const [tieringOpt, setTieringOpt] = useState(true);
+  const [maxTokensOpt, setMaxTokensOpt] = useState(350);
+
   const [signoffCompleted, setSignoffCompleted] = useState(false);
   const [inputText, setInputText] = useState('');
   const [selectedChannel, setSelectedChannel] = useState<'rcs' | 'sms' | 'whatsapp' | 'ses'>('rcs');
@@ -212,6 +222,72 @@ export default function App() {
   const notify = (msg: string) => {
     setActionNotice(msg);
     setTimeout(() => setActionNotice(null), 3500);
+  };
+
+  const fetchSettings = async () => {
+    try {
+      const res = await fetch(`/api/settings/keys?tenant_id=${selectedTenant}`);
+      if (res.ok) {
+        const data = await res.json();
+        setKeySettings(data);
+        setProviderChoice(data.provider || 'emulated');
+        setCacheOpt(data.cache_enabled === 1);
+        setTieringOpt(data.tiering_enabled === 1);
+        setMaxTokensOpt(data.max_output_tokens || 350);
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const handleTestKey = async () => {
+    if (!apiKeyVal.trim()) return;
+    setTestResult({ testing: true });
+    try {
+      const res = await fetch('/api/settings/test-key', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ provider: providerChoice, key: apiKeyVal.trim() })
+      });
+      const data = await res.json();
+      if (res.ok && data.valid) {
+        setTestResult({ testing: false, success: true, msg: `Verified ${data.model} (${data.latency_ms}ms ping)` });
+      } else {
+        setTestResult({ testing: false, success: false, msg: data.detail || 'Verification failed' });
+      }
+    } catch (err: any) {
+      setTestResult({ testing: false, success: false, msg: err.message || 'Network error' });
+    }
+  };
+
+  const handleSaveKeys = async () => {
+    try {
+      const body: any = {
+        tenant_id: selectedTenant,
+        provider: providerChoice,
+        cache_enabled: cacheOpt,
+        tiering_enabled: tieringOpt,
+        max_output_tokens: maxTokensOpt
+      };
+      if (providerChoice === 'anthropic' && apiKeyVal.trim()) {
+        body.anthropic_key = apiKeyVal.trim();
+      } else if (providerChoice === 'openai' && apiKeyVal.trim()) {
+        body.openai_key = apiKeyVal.trim();
+      }
+      const res = await fetch('/api/settings/keys', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body)
+      });
+      if (res.ok) {
+        notify(`AI Engine updated: ${providerChoice === 'emulated' ? 'Emulated Zero-Cost' : 'Live ' + providerChoice.toUpperCase()}`);
+        setShowKeyModal(false);
+        setApiKeyVal('');
+        await fetchSettings();
+      }
+    } catch (err) {
+      console.error(err);
+    }
   };
 
   const fetchRosterData = async () => {
@@ -250,6 +326,7 @@ export default function App() {
       if (lRes.ok) setAuditBlocks(await lRes.json());
       if (fRes.ok) setFinops(await fRes.json());
       await fetchRosterData();
+      await fetchSettings();
     } catch (err) {
       console.error("Dashboard fetch error:", err);
     }
@@ -302,6 +379,7 @@ export default function App() {
         setNewContactRole('');
         setNewContactEmail('');
         await fetchRosterData();
+      await fetchSettings();
       }
     } catch (err) {
       console.error(err);
@@ -316,6 +394,7 @@ export default function App() {
         body: JSON.stringify({ is_on_call: contact.is_on_call === 1 ? false : true })
       });
       await fetchRosterData();
+      await fetchSettings();
       notify(`Updated ${contact.full_name} on-call status.`);
     } catch (err) {
       console.error(err);
@@ -326,6 +405,7 @@ export default function App() {
     try {
       await fetch(`/api/roster/${contactId}`, { method: 'DELETE' });
       await fetchRosterData();
+      await fetchSettings();
       notify("Contact removed from directory.");
     } catch (err) {
       console.error(err);
@@ -568,6 +648,19 @@ export default function App() {
               {actionNotice}
             </motion.span>
           )}
+
+          <button
+            onClick={() => setShowKeyModal(true)}
+            className={`inline-flex items-center gap-1.5 rounded px-2.5 py-1 text-xs font-mono font-medium transition-colors border ${
+              keySettings?.provider === 'anthropic' || keySettings?.provider === 'openai'
+                ? 'border-[#27a644]/40 bg-[#27a644]/15 text-[#6ee7b7] shadow-[0_0_12px_rgba(39,166,68,0.2)]'
+                : 'border-[#2e3038] bg-[#121316] hover:bg-[#1a1b20] text-[#d0d6e0]'
+            }`}
+            title="Configure Live Anthropic / OpenAI Keys & Token Optimizer"
+          >
+            <Key className="h-3.5 w-3.5 text-[#5e6ad2]" />
+            <span>{keySettings?.provider === 'anthropic' ? '⚡ Claude 3.5 Active' : keySettings?.provider === 'openai' ? '⚡ GPT-4o Active' : 'AI Engine (BYOK)'}</span>
+          </button>
 
           <button
             onClick={triggerJudgeDemo}
@@ -1319,6 +1412,187 @@ export default function App() {
           </div>
         </aside>
       </div>
+
+      {/* 3. BYOK & Token Optimizer Settings Modal */}
+      <AnimatePresence>
+        {showKeyModal && (
+          <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 10 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 10 }}
+              className="w-full max-w-lg rounded-2xl border border-[#2e303f] bg-[#0c0d12] shadow-2xl p-5 space-y-4"
+            >
+              {/* Modal Header */}
+              <div className="flex items-center justify-between pb-3 border-b border-[#23252a]">
+                <div className="flex items-center gap-2">
+                  <div className="h-8 w-8 rounded-lg bg-[#5e6ad2]/20 border border-[#5e6ad2]/40 flex items-center justify-center text-[#a5afff]">
+                    <Key className="h-4 w-4" />
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-semibold text-white">AI Engine & API Key Setup (BYOK)</h3>
+                    <p className="text-[11px] text-[#8a8f98]">Connect live Claude 3.5 / GPT-4o or use zero-cost emulated mode.</p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setShowKeyModal(false)}
+                  className="p-1 rounded text-[#8a8f98] hover:text-white hover:bg-white/5 transition-colors"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+
+              {/* Provider Selection */}
+              <div className="space-y-1.5">
+                <label className="text-xs font-semibold text-white block">Inference Provider</label>
+                <div className="grid grid-cols-3 gap-2">
+                  {[
+                    { id: 'anthropic', label: 'Anthropic Claude', sub: 'Sonnet & Haiku' },
+                    { id: 'openai', label: 'OpenAI', sub: 'GPT-4o & 4o-mini' },
+                    { id: 'emulated', label: 'Emulated Engine', sub: 'Zero-Cost Demo' }
+                  ].map((p) => (
+                    <button
+                      key={p.id}
+                      type="button"
+                      onClick={() => {
+                        setProviderChoice(p.id as any);
+                        setTestResult(null);
+                      }}
+                      className={`p-2.5 rounded-lg border text-left transition-all ${
+                        providerChoice === p.id
+                          ? 'border-[#5e6ad2] bg-[#5e6ad2]/10 text-white shadow-sm'
+                          : 'border-[#23252a] bg-[#121316] text-[#8a8f98] hover:border-[#2e3038]'
+                      }`}
+                    >
+                      <span className="font-semibold text-xs block text-white">{p.label}</span>
+                      <span className="text-[10px] text-[#8a8f98] font-mono">{p.sub}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* API Key Input */}
+              {providerChoice !== 'emulated' ? (
+                <div className="space-y-1.5">
+                  <div className="flex justify-between items-center text-xs">
+                    <label className="font-semibold text-white">
+                      {providerChoice === 'anthropic' ? 'Anthropic API Key' : 'OpenAI API Key'}
+                    </label>
+                    {keySettings && (providerChoice === 'anthropic' ? keySettings.anthropic_key_masked : keySettings.openai_key_masked) && (
+                      <span className="text-[10px] font-mono text-[#27a644]">
+                        Saved: {providerChoice === 'anthropic' ? keySettings.anthropic_key_masked : keySettings.openai_key_masked}
+                      </span>
+                    )}
+                  </div>
+                  <div className="flex gap-2">
+                    <input
+                      type="password"
+                      placeholder={providerChoice === 'anthropic' ? 'sk-ant-api03-...' : 'sk-proj-...'}
+                      value={apiKeyVal}
+                      onChange={(e) => setApiKeyVal(e.target.value)}
+                      className="flex-1 bg-black/60 border border-[#23252a] rounded-lg px-3 py-1.5 text-xs text-white font-mono placeholder-[#62666d] focus:outline-none focus:border-[#5e6ad2]"
+                    />
+                    <button
+                      type="button"
+                      onClick={handleTestKey}
+                      disabled={!apiKeyVal.trim() || testResult?.testing}
+                      className="px-3 py-1.5 rounded-lg border border-[#2e3038] bg-[#18191d] hover:bg-[#22242a] text-xs font-medium text-white transition-colors disabled:opacity-50"
+                    >
+                      {testResult?.testing ? 'Testing...' : 'Test Key'}
+                    </button>
+                  </div>
+
+                  {testResult && (
+                    <div className={`p-2 rounded text-xs font-mono flex items-center gap-1.5 ${
+                      testResult.success ? 'bg-[#27a644]/15 border border-[#27a644]/30 text-[#6ee7b7]' : 'bg-[#ef4444]/15 border border-[#ef4444]/30 text-[#f87171]'
+                    }`}>
+                      {testResult.success ? <CheckCircle2 className="h-3.5 w-3.5" /> : <AlertTriangle className="h-3.5 w-3.5" />}
+                      <span>{testResult.msg}</span>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div className="p-3 rounded-xl border border-[#27a644]/30 bg-[#27a644]/10 text-xs text-[#d0d6e0] space-y-1">
+                  <div className="font-semibold text-[#6ee7b7] flex items-center gap-1.5">
+                    <CheckCircle2 className="h-4 w-4" />
+                    <span>Zero-Cost Deterministic Engine Active</span>
+                  </div>
+                  <p className="text-[11px] text-[#8a8f98]">
+                    No external API keys required. Responses, consensus deliberations, and A2A negotiations run at 38ms latency at $0.00 cost.
+                  </p>
+                </div>
+              )}
+
+              {/* FinOps Token Reduction Settings */}
+              <div className="p-3 rounded-xl border border-[#23252a] bg-[#090a0d] space-y-2.5">
+                <span className="text-[10px] font-mono text-[#a5afff] uppercase tracking-wider block font-semibold">
+                  FinOps Token Optimization Engine
+                </span>
+
+                <div className="flex items-center justify-between text-xs">
+                  <div>
+                    <span className="text-white font-medium block">Dynamic Model Tiering (Routing Cascade)</span>
+                    <span className="text-[10px] text-[#8a8f98]">Routes intent classification to Haiku (saves ~90% tokens). Flagship Sonnet reserved for consensus.</span>
+                  </div>
+                  <input
+                    type="checkbox"
+                    checked={tieringOpt}
+                    onChange={(e) => setTieringOpt(e.target.checked)}
+                    className="h-4 w-4 rounded accent-[#5e6ad2]"
+                  />
+                </div>
+
+                <div className="flex items-center justify-between text-xs pt-2 border-t border-white/5">
+                  <div>
+                    <span className="text-white font-medium block">Zero-Token Telemetry Cache</span>
+                    <span className="text-[10px] text-[#8a8f98]">Caches recurring sensor telemetry deliberations for 10 minutes (0 tokens burned).</span>
+                  </div>
+                  <input
+                    type="checkbox"
+                    checked={cacheOpt}
+                    onChange={(e) => setCacheOpt(e.target.checked)}
+                    className="h-4 w-4 rounded accent-[#5e6ad2]"
+                  />
+                </div>
+
+                <div className="flex items-center justify-between text-xs pt-2 border-t border-white/5">
+                  <div>
+                    <span className="text-white font-medium block">Max Output Tokens Cap ({maxTokensOpt} tokens)</span>
+                    <span className="text-[10px] text-[#8a8f98]">Strictly prevents rambling to minimize monthly inference spend.</span>
+                  </div>
+                  <input
+                    type="range"
+                    min="150"
+                    max="800"
+                    step="50"
+                    value={maxTokensOpt}
+                    onChange={(e) => setMaxTokensOpt(parseInt(e.target.value))}
+                    className="w-24 accent-[#5e6ad2]"
+                  />
+                </div>
+              </div>
+
+              {/* Modal Actions */}
+              <div className="flex justify-end gap-2 pt-2 border-t border-[#23252a]">
+                <button
+                  type="button"
+                  onClick={() => setShowKeyModal(false)}
+                  className="px-3 py-1.5 rounded-lg border border-[#2e3038] bg-[#121316] hover:bg-[#1c1d22] text-xs font-medium text-white transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={handleSaveKeys}
+                  className="px-4 py-1.5 rounded-lg bg-[#5e6ad2] hover:bg-[#6875e5] text-xs font-semibold text-white transition-all shadow-sm active:scale-95"
+                >
+                  Save & Activate
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

@@ -93,6 +93,23 @@ def init_db():
     )
     """)
 
+    # BYOK (Bring Your Own Key) & Token Optimization Engine Settings
+    cur.execute("""
+    CREATE TABLE IF NOT EXISTS api_keys_settings (
+        tenant_id TEXT PRIMARY KEY,
+        provider TEXT NOT NULL DEFAULT 'emulated', -- 'anthropic', 'openai', 'aws_bedrock', 'emulated'
+        anthropic_key TEXT,
+        openai_key TEXT,
+        aws_access_key TEXT,
+        aws_secret_key TEXT,
+        aws_region TEXT DEFAULT 'us-east-1',
+        cache_enabled INTEGER DEFAULT 1,
+        tiering_enabled INTEGER DEFAULT 1,
+        max_output_tokens INTEGER DEFAULT 400,
+        updated_at REAL NOT NULL
+    )
+    """)
+
     conn.commit()
 
     # Seed initial enterprise data if empty
