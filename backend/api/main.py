@@ -5,6 +5,9 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 from backend.api.dashboard import router as dashboard_router
 from backend.api.webhooks import router as webhooks_router
+from backend.api.auth import router as auth_router
+from backend.api.roster import router as roster_router
+from backend.api.playbooks import router as playbooks_router
 from backend.api.demo import JudgeDemoOrchestrator
 
 app = FastAPI(
@@ -23,6 +26,9 @@ app.add_middleware(
 
 app.include_router(dashboard_router)
 app.include_router(webhooks_router)
+app.include_router(auth_router)
+app.include_router(roster_router)
+app.include_router(playbooks_router)
 
 @app.on_event("startup")
 def startup_event():

@@ -4,7 +4,8 @@ import {
   MessageSquare, ShieldAlert, Cpu, Send, Play, AlertTriangle,
   CheckCircle, Database, Globe, ShieldCheck, Zap,
   DollarSign, FileText, Network, Server, Lock, Layers,
-  ChevronRight, ArrowRight, CornerDownRight, Check, X, Shield, RefreshCw
+  ChevronRight, ArrowRight, CornerDownRight, Check, X, Shield, RefreshCw,
+  Phone, Users, Plus, Trash2, Radio, Bell
 } from 'lucide-react';
 import { LiveAIInspector } from './components/ui/live-ai-inspector';
 
@@ -118,8 +119,53 @@ interface CustomerProfile {
   interaction_budget_remaining: number;
 }
 
+interface Contact {
+  id: string;
+  tenant_id: string;
+  full_name: string;
+  role: string;
+  phone_number: string;
+  email: string;
+  channel_preference: 'sms' | 'whatsapp' | 'rcs' | 'voice';
+  escalation_tier: 'P1_CRITICAL' | 'P2_HIGH' | 'P3_STANDARD';
+  is_on_call: number;
+  last_notified_at?: number;
+}
+
+interface DispatchedAlert {
+  id: string;
+  tenant_id: string;
+  incident_id: string;
+  recipient_name: string;
+  recipient_phone: string;
+  channel: string;
+  message: string;
+  status: string;
+  timestamp: number;
+}
+
+interface Playbook {
+  id: string;
+  title: string;
+  category: string;
+  industry: string;
+  description: string;
+  steps_count: number;
+  sla_target_minutes: number;
+}
+
+interface UserProfile {
+  id: string;
+  email: string;
+  full_name: string;
+  role: string;
+  title: string;
+  tenant_id: string;
+  tenant_name: string;
+}
+
 export default function App() {
-  const [activeView, setActiveView] = useState<'timeline' | 'consensus' | 'a2a' | 'finops' | 'audit' | 'rejections' | 'topology' | 'channels'>('timeline');
+  const [activeView, setActiveView] = useState<'timeline' | 'roster' | 'playbooks' | 'consensus' | 'a2a' | 'finops' | 'audit' | 'rejections' | 'topology' | 'channels'>('timeline');
   const [timeline, setTimeline] = useState<TimelineEvent[]>([]);
   const [profile, setProfile] = useState<CustomerProfile | null>(null);
   const [rejections, setRejections] = useState<Rejection[]>([]);
@@ -127,8 +173,35 @@ export default function App() {
   const [a2aSession, setA2aSession] = useState<A2ASessionData | null>(null);
   const [auditBlocks, setAuditBlocks] = useState<AuditBlock[]>([]);
   const [finops, setFinops] = useState<FinOpsReport | null>(null);
+  
+  // Enterprise States
   const [selectedTenant, setSelectedTenant] = useState('tenant-cloudscale');
   const [selectedRole, setSelectedRole] = useState('INCIDENT_COMMANDER');
+  const [currentUser, setCurrentUser] = useState<UserProfile>({
+    id: 'usr-ic-890',
+    email: 'sarah.chen@cloudscale.com',
+    full_name: 'Sarah Chen',
+    role: 'INCIDENT_COMMANDER',
+    title: 'VP of Critical Infrastructure',
+    tenant_id: 'tenant-cloudscale',
+    tenant_name: 'CloudScale Datacenters Inc.'
+  });
+  const [availableUsers, setAvailableUsers] = useState<UserProfile[]>([]);
+  const [roster, setRoster] = useState<Contact[]>([]);
+  const [dispatchedAlerts, setDispatchedAlerts] = useState<DispatchedAlert[]>([]);
+  const [playbooks, setPlaybooks] = useState<Playbook[]>([]);
+  const [lastExecutedPlaybook, setLastExecutedPlaybook] = useState<any | null>(null);
+  const [isExecutingPlaybook, setIsExecutingPlaybook] = useState(false);
+
+  // New Contact Form Modal state
+  const [showAddContact, setShowAddContact] = useState(false);
+  const [newContactName, setNewContactName] = useState('');
+  const [newContactRole, setNewContactRole] = useState('');
+  const [newContactPhone, setNewContactPhone] = useState('');
+  const [newContactEmail, setNewContactEmail] = useState('');
+  const [newContactChannel, setNewContactChannel] = useState<'sms' | 'whatsapp' | 'rcs' | 'voice'>('sms');
+  const [newContactTier, setNewContactTier] = useState<'P1_CRITICAL' | 'P2_HIGH' | 'P3_STANDARD'>('P1_CRITICAL');
+
   const [signoffCompleted, setSignoffCompleted] = useState(false);
   const [inputText, setInputText] = useState('');
   const [selectedChannel, setSelectedChannel] = useState<'rcs' | 'sms' | 'whatsapp' | 'ses'>('rcs');
@@ -138,7 +211,24 @@ export default function App() {
 
   const notify = (msg: string) => {
     setActionNotice(msg);
-    setTimeout(() => setActionNotice(null), 3000);
+    setTimeout(() => setActionNotice(null), 3500);
+  };
+
+  const fetchRosterData = async () => {
+    try {
+      const [rRes, aRes, pbRes, uRes] = await Promise.all([
+        fetch(`/api/roster?tenant_id=${selectedTenant}`),
+        fetch(`/api/roster/alerts?tenant_id=${selectedTenant}`),
+        fetch('/api/playbooks'),
+        fetch('/api/auth/users')
+      ]);
+      if (rRes.ok) setRoster(await rRes.json());
+      if (aRes.ok) setDispatchedAlerts(await aRes.json());
+      if (pbRes.ok) setPlaybooks(await pbRes.json());
+      if (uRes.ok) setAvailableUsers(await uRes.json());
+    } catch (err) {
+      console.error("Enterprise fetch error:", err);
+    }
   };
 
   const fetchState = async () => {
@@ -159,6 +249,7 @@ export default function App() {
       if (aRes.ok) setA2aSession(await aRes.json());
       if (lRes.ok) setAuditBlocks(await lRes.json());
       if (fRes.ok) setFinops(await fRes.json());
+      await fetchRosterData();
     } catch (err) {
       console.error("Dashboard fetch error:", err);
     }
@@ -166,9 +257,126 @@ export default function App() {
 
   useEffect(() => {
     fetchState();
-    const interval = setInterval(fetchState, 3500);
+    const interval = setInterval(fetchState, 4000);
     return () => clearInterval(interval);
-  }, []);
+  }, [selectedTenant]);
+
+  const handleSwitchUser = async (userId: string) => {
+    try {
+      const res = await fetch(`/api/auth/switch/${userId}`, { method: 'POST' });
+      if (res.ok) {
+        const data = await res.json();
+        setCurrentUser(data.user);
+        setSelectedRole(data.user.role);
+        setSelectedTenant(data.user.tenant_id);
+        notify(`Switched context to ${data.user.full_name} (${data.user.tenant_name})`);
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const handleCreateContact = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newContactName || !newContactPhone) return;
+    try {
+      const res = await fetch('/api/roster', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          tenant_id: selectedTenant,
+          full_name: newContactName,
+          role: newContactRole || 'On-Call Engineer',
+          phone_number: newContactPhone,
+          email: newContactEmail || 'ops@enterprise.internal',
+          channel_preference: newContactChannel,
+          escalation_tier: newContactTier,
+          is_on_call: true
+        })
+      });
+      if (res.ok) {
+        notify(`Added ${newContactName} to Enterprise On-Call Directory.`);
+        setShowAddContact(false);
+        setNewContactName('');
+        setNewContactPhone('');
+        setNewContactRole('');
+        setNewContactEmail('');
+        await fetchRosterData();
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const handleToggleOnCall = async (contact: Contact) => {
+    try {
+      await fetch(`/api/roster/${contact.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ is_on_call: contact.is_on_call === 1 ? false : true })
+      });
+      await fetchRosterData();
+      notify(`Updated ${contact.full_name} on-call status.`);
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const handleDeleteContact = async (contactId: string) => {
+    try {
+      await fetch(`/api/roster/${contactId}`, { method: 'DELETE' });
+      await fetchRosterData();
+      notify("Contact removed from directory.");
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const handleBroadcastAlert = async () => {
+    setIsLoading(true);
+    try {
+      const res = await fetch('/api/roster/broadcast', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          tenant_id: selectedTenant,
+          incident_id: 'INC-2026-904',
+          alert_tier: 'ALL_ON_CALL',
+          custom_message: '[EMERGENCY BROADCAST] Chiller Loop 4B Thermal Warning. Immediate ACK required via WhatsApp/SMS.'
+        })
+      });
+      if (res.ok) {
+        const data = await res.json();
+        notify(`🚨 Alert dispatched to ${data.recipients_count} active on-call staff via SMS & WhatsApp!`);
+        await fetchState();
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleRunPlaybook = async (playbookId: string) => {
+    setIsExecutingPlaybook(true);
+    try {
+      const res = await fetch('/api/playbooks/execute', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ playbook_id: playbookId, tenant_id: selectedTenant })
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setLastExecutedPlaybook(data);
+        notify(`Executed Playbook: ${data.playbook_title}`);
+        await fetchState();
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setIsExecutingPlaybook(false);
+    }
+  };
 
   const triggerJudgeDemo = async () => {
     setIsLoading(true);
@@ -210,7 +418,7 @@ export default function App() {
   };
 
   const executeSignoff = async () => {
-    if (selectedRole !== 'INCIDENT_COMMANDER') {
+    if (currentUser.role !== 'INCIDENT_COMMANDER') {
       notify("Access Denied: Only Incident Commander has sign-off authority.");
       return;
     }
@@ -222,8 +430,8 @@ export default function App() {
         body: JSON.stringify({
           incident_id: 'INC-SERVER-COOLING-771',
           tenant_id: selectedTenant,
-          user_id: 'usr-ic-890',
-          user_role: selectedRole,
+          user_id: currentUser.id,
+          user_role: currentUser.role,
           authorized_amount_usd: 1780.0,
           action_approved: 'A2A Compressor Expedited Dispatch'
         })
@@ -286,6 +494,8 @@ export default function App() {
         return <span className="px-1.5 py-0.5 rounded text-[10px] font-mono font-medium bg-[#06b6d4]/20 text-[#67e8f9] border border-[#06b6d4]/30">SMS</span>;
       case 'ses':
         return <span className="px-1.5 py-0.5 rounded text-[10px] font-mono font-medium bg-[#f59e0b]/20 text-[#fcd34d] border border-[#f59e0b]/30">SES</span>;
+      case 'voice':
+        return <span className="px-1.5 py-0.5 rounded text-[10px] font-mono font-medium bg-[#ec4899]/20 text-[#f472b6] border border-[#ec4899]/30">VOICE</span>;
       default:
         return <span className="px-1.5 py-0.5 rounded text-[10px] font-mono bg-neutral-800 text-neutral-300">{ch}</span>;
     }
@@ -293,6 +503,8 @@ export default function App() {
 
   const navItems = [
     { id: 'timeline', label: 'Omnichannel Feed', icon: MessageSquare, badge: timeline.length },
+    { id: 'roster', label: 'On-Call Roster & Numbers', icon: Phone, badge: roster.length },
+    { id: 'playbooks', label: 'Enterprise Playbooks', icon: Zap, badge: '3' },
     { id: 'consensus', label: 'Blind Consensus', icon: ShieldCheck, badge: consensus ? consensus.perspectives.length : 3 },
     { id: 'a2a', label: 'A2A Protocol Broker', icon: Network, badge: a2aSession ? a2aSession.turns.length : 3 },
     { id: 'finops', label: 'FinOps & Tokens', icon: DollarSign, badge: `$${finops ? finops.total_cost_usd : '0.02'}` },
@@ -304,7 +516,7 @@ export default function App() {
 
   return (
     <div className="h-screen w-screen overflow-hidden bg-[#010102] text-[#f7f8f8] flex flex-col font-sans select-none">
-      {/* 1. Ultra-clean Header Toolbar */}
+      {/* 1. Header Toolbar with Enterprise Multi-Tenant & User Session */}
       <header className="h-12 flex-shrink-0 border-b border-[#23252a] bg-[#070709] px-4 flex items-center justify-between z-30">
         <div className="flex items-center gap-3">
           <div className="flex h-7 w-7 items-center justify-center rounded-md bg-[#0f1011] border border-[#2e3038] shadow-[inset_0_1px_0_rgba(255,255,255,0.1)]">
@@ -315,33 +527,34 @@ export default function App() {
           </div>
 
           <div className="flex items-center gap-2">
-            <span className="font-semibold text-sm tracking-tight text-[#f7f8f8]">Nexus</span>
+            <span className="font-semibold text-sm tracking-tight text-[#f7f8f8]">NexusAI</span>
             <span className="text-xs text-[#62666d] font-mono">/</span>
-            <span className="text-xs font-mono text-[#8a8f98]">orchestrator</span>
+            <span className="text-xs font-mono text-[#8a8f98]">enterprise</span>
           </div>
 
           <div className="h-4 w-[1px] bg-[#23252a] mx-1" />
 
-          {/* Tenant Selector */}
-          <select
-            value={selectedTenant}
-            onChange={(e) => setSelectedTenant(e.target.value)}
-            className="bg-[#0f1011] hover:bg-[#151619] border border-[#23252a] text-[11px] font-mono text-[#d0d6e0] rounded px-2 py-1 focus:outline-none focus:border-[#5e6ad2] transition-colors cursor-pointer"
-          >
-            <option value="tenant-cloudscale">CloudScale Datacenters (Tier-4)</option>
-            <option value="tenant-apex-health">Apex Health Systems (HIPAA)</option>
-          </select>
+          {/* User Session Switcher */}
+          <div className="flex items-center gap-2">
+            <span className="text-[10px] font-mono text-[#62666d]">SESSION:</span>
+            <select
+              value={currentUser.id}
+              onChange={(e) => handleSwitchUser(e.target.value)}
+              className="bg-[#0f1011] hover:bg-[#151619] border border-[#23252a] text-[11px] font-mono text-[#d0d6e0] rounded px-2.5 py-1 focus:outline-none focus:border-[#5e6ad2] transition-colors cursor-pointer"
+            >
+              {availableUsers.map((u) => (
+                <option key={u.id} value={u.id}>
+                  {u.full_name} · {u.role === 'INCIDENT_COMMANDER' ? 'VP Commander' : u.role === 'FIELD_ENGINEER' ? 'Lead SRE' : u.role === 'CFO_FINOPS_LEAD' ? 'CFO' : 'Auditor'} ({u.tenant_id === 'tenant-cloudscale' ? 'CloudScale DC' : 'Apex Health'})
+                </option>
+              ))}
+            </select>
+          </div>
 
-          {/* RBAC Role Selector */}
-          <select
-            value={selectedRole}
-            onChange={(e) => setSelectedRole(e.target.value)}
-            className="bg-[#0f1011] hover:bg-[#151619] border border-[#23252a] text-[11px] font-mono text-[#a5afff] rounded px-2 py-1 focus:outline-none focus:border-[#5e6ad2] transition-colors cursor-pointer"
-          >
-            <option value="INCIDENT_COMMANDER">Commander (Sign-off Auth)</option>
-            <option value="FIELD_ENGINEER">Field Tech (Read / Submit)</option>
-            <option value="COMPLIANCE_AUDITOR">Auditor (SOC 2 Read)</option>
-          </select>
+          {/* Active Tenant Badge */}
+          <span className="hidden lg:inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[10px] font-mono bg-[#14151a] text-[#8a8f98] border border-[#23252a]">
+            <span className="h-1.5 w-1.5 rounded-full bg-[#27a644]" />
+            {selectedTenant === 'tenant-cloudscale' ? 'CloudScale Datacenters (Tier-4 Frankfurt)' : 'Apex Health Care (HIPAA Virginia)'}
+          </span>
         </div>
 
         {/* Global Action Strip */}
@@ -368,7 +581,7 @@ export default function App() {
           <button
             onClick={() => triggerRedTeam('prompt_injection')}
             title="Red-Team: Test prompt injection honeypot trapping"
-            className="inline-flex items-center gap-1 rounded border border-[#3e2428] bg-[#1a0e10] hover:bg-[#261316] px-2 py-1 text-xs font-medium text-[#f87171] transition-colors"
+            className="inline-flex items-center gap-1 rounded border border-[#ef4444]/30 bg-[#1f1011] hover:bg-[#2c1416] px-2 py-1 text-xs font-medium text-[#f87171] transition-colors"
           >
             <ShieldAlert className="h-3 w-3" />
             <span>Inject Test</span>
@@ -376,7 +589,7 @@ export default function App() {
 
           <button
             onClick={() => triggerRedTeam('budget_exceeded')}
-            title="Red-Team: Test silence gate when budget exhausted"
+            title="Red-Team: Test interaction budget code gate"
             className="inline-flex items-center gap-1 rounded border border-[#382b19] bg-[#1a140b] hover:bg-[#261e10] px-2 py-1 text-xs font-medium text-[#fbbf24] transition-colors"
           >
             <AlertTriangle className="h-3 w-3" />
@@ -391,7 +604,7 @@ export default function App() {
         <aside className="w-56 flex-shrink-0 border-r border-[#23252a] bg-[#070709] flex flex-col justify-between p-2">
           <div className="space-y-0.5">
             <span className="px-2.5 py-1 text-[10px] font-mono font-medium text-[#62666d] uppercase tracking-wider block">
-              Core Modules
+              Enterprise Control
             </span>
 
             {navItems.map((item) => {
@@ -428,8 +641,8 @@ export default function App() {
               <span className="text-[#27a644] font-semibold">{liveLatency} ms</span>
             </div>
             <div className="flex justify-between items-center text-[10px] font-mono text-[#8a8f98]">
-              <span>Active Agents:</span>
-              <span className="text-white">4 Specialized</span>
+              <span>On-Call Numbers:</span>
+              <span className="text-white">{roster.filter(r => r.is_on_call === 1).length} active</span>
             </div>
             <div className="flex justify-between items-center text-[10px] font-mono text-[#8a8f98]">
               <span>Gate Status:</span>
@@ -438,7 +651,7 @@ export default function App() {
           </div>
         </aside>
 
-        {/* Center Main Viewport (Zero Page-Level Scroll, Internal Scrollable panes only) */}
+        {/* Center Main Viewport */}
         <main className="flex-1 flex flex-col overflow-hidden bg-[#010102]">
           {/* Executive P1 Sign-off Banner (Compact Top Bar) */}
           <div className="h-10 flex-shrink-0 border-b border-[#23252a] bg-[#0a0a0d] px-4 flex items-center justify-between">
@@ -453,11 +666,11 @@ export default function App() {
 
             <button
               onClick={executeSignoff}
-              disabled={signoffCompleted || selectedRole !== 'INCIDENT_COMMANDER'}
+              disabled={signoffCompleted || currentUser.role !== 'INCIDENT_COMMANDER'}
               className={`px-3 py-1 rounded text-xs font-semibold flex items-center gap-1.5 transition-all ${
                 signoffCompleted
                   ? 'bg-[#18191c] text-[#8a8f98] cursor-not-allowed border border-[#23252a]'
-                  : selectedRole !== 'INCIDENT_COMMANDER'
+                  : currentUser.role !== 'INCIDENT_COMMANDER'
                   ? 'bg-[#18191c] text-[#62666d] cursor-not-allowed border border-[#23252a]'
                   : 'bg-[#27a644] hover:bg-[#2db84d] text-white shadow-sm'
               }`}
@@ -469,6 +682,263 @@ export default function App() {
 
           {/* Dynamic Module Content View */}
           <div className="flex-1 overflow-hidden p-4">
+            
+            {/* VIEW: ON-CALL ROSTER & VERIFIED NUMBERS */}
+            {activeView === 'roster' && (
+              <div className="h-full flex flex-col justify-between overflow-hidden space-y-3">
+                {/* Header Action Strip */}
+                <div className="flex justify-between items-center pb-2 border-b border-[#23252a] flex-shrink-0">
+                  <div>
+                    <h3 className="text-sm font-semibold text-white flex items-center gap-2">
+                      <Phone className="h-4 w-4 text-[#5e6ad2]" />
+                      <span>Enterprise Emergency Contact Directory</span>
+                    </h3>
+                    <p className="text-[11px] text-[#8a8f98]">
+                      Pre-defined phone numbers for automated SMS & WhatsApp incident dispatching.
+                    </p>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={handleBroadcastAlert}
+                      disabled={isLoading}
+                      className="px-3 py-1.5 rounded bg-[#ef4444] hover:bg-[#dc2626] text-white text-xs font-semibold flex items-center gap-1.5 shadow-sm transition-all active:scale-95"
+                    >
+                      <Bell className="h-3.5 w-3.5 fill-current" />
+                      <span>Broadcast P1 Alert (SMS + WhatsApp)</span>
+                    </button>
+
+                    <button
+                      onClick={() => setShowAddContact(!showAddContact)}
+                      className="px-3 py-1.5 rounded bg-[#1f2025] hover:bg-[#2b2d35] text-white text-xs font-medium border border-[#2e3038] flex items-center gap-1.5 transition-colors"
+                    >
+                      <Plus className="h-3.5 w-3.5" />
+                      <span>Add Number</span>
+                    </button>
+                  </div>
+                </div>
+
+                {/* Add Contact Inline Card */}
+                {showAddContact && (
+                  <form onSubmit={handleCreateContact} className="p-3 rounded-lg border border-[#2e303f] bg-[#0c0d12] flex flex-wrap gap-2 items-center flex-shrink-0 text-xs">
+                    <input
+                      type="text"
+                      placeholder="Full Name (e.g. John Doe)"
+                      value={newContactName}
+                      onChange={(e) => setNewContactName(e.target.value)}
+                      className="bg-black/50 border border-[#23252a] rounded px-2.5 py-1 text-white placeholder-[#62666d] flex-1 min-w-[140px]"
+                      required
+                    />
+                    <input
+                      type="text"
+                      placeholder="Role (e.g. Backup SRE)"
+                      value={newContactRole}
+                      onChange={(e) => setNewContactRole(e.target.value)}
+                      className="bg-black/50 border border-[#23252a] rounded px-2.5 py-1 text-white placeholder-[#62666d] flex-1 min-w-[130px]"
+                    />
+                    <input
+                      type="text"
+                      placeholder="Phone (+3630...)"
+                      value={newContactPhone}
+                      onChange={(e) => setNewContactPhone(e.target.value)}
+                      className="bg-black/50 border border-[#23252a] rounded px-2.5 py-1 text-white placeholder-[#62666d] flex-1 min-w-[130px]"
+                      required
+                    />
+                    <select
+                      value={newContactChannel}
+                      onChange={(e: any) => setNewContactChannel(e.target.value)}
+                      className="bg-black/50 border border-[#23252a] rounded px-2 py-1 text-neutral-300"
+                    >
+                      <option value="sms">SMS</option>
+                      <option value="whatsapp">WhatsApp</option>
+                      <option value="voice">Voice Call</option>
+                    </select>
+                    <select
+                      value={newContactTier}
+                      onChange={(e: any) => setNewContactTier(e.target.value)}
+                      className="bg-black/50 border border-[#23252a] rounded px-2 py-1 text-neutral-300"
+                    >
+                      <option value="P1_CRITICAL">P1 Critical</option>
+                      <option value="P2_HIGH">P2 High</option>
+                      <option value="P3_STANDARD">P3 Standard</option>
+                    </select>
+                    <button
+                      type="submit"
+                      className="px-3 py-1 rounded bg-[#27a644] hover:bg-[#2db84d] text-white font-medium"
+                    >
+                      Save Contact
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setShowAddContact(false)}
+                      className="px-2.5 py-1 rounded bg-white/10 hover:bg-white/20 text-[#8a8f98]"
+                    >
+                      Cancel
+                    </button>
+                  </form>
+                )}
+
+                {/* Contacts Directory Table */}
+                <div className="flex-1 overflow-y-auto rounded-xl border border-[#23252a] bg-[#0c0d10]">
+                  <table className="w-full text-left text-xs font-mono">
+                    <thead className="bg-black/50 text-[#8a8f98] text-[10px] uppercase border-b border-white/5 sticky top-0">
+                      <tr>
+                        <th className="p-2.5">Personnel / Role</th>
+                        <th className="p-2.5">Emergency Phone</th>
+                        <th className="p-2.5">Pref. Channel</th>
+                        <th className="p-2.5">Tier</th>
+                        <th className="p-2.5">On-Call Duty</th>
+                        <th className="p-2.5">Last Notified</th>
+                        <th className="p-2.5 text-right">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-white/5 text-[11px]">
+                      {roster.map((c) => (
+                        <tr key={c.id} className="hover:bg-white/[0.02]">
+                          <td className="p-2.5 font-sans">
+                            <span className="text-white font-semibold block">{c.full_name}</span>
+                            <span className="text-[10px] text-[#8a8f98]">{c.role}</span>
+                          </td>
+                          <td className="p-2.5 text-[#67e8f9] font-mono">{c.phone_number}</td>
+                          <td className="p-2.5">{channelBadge(c.channel_preference)}</td>
+                          <td className="p-2.5">
+                            <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${
+                              c.escalation_tier === 'P1_CRITICAL' ? 'bg-[#ef4444]/20 text-[#f87171]' : 'bg-[#f59e0b]/20 text-[#fcd34d]'
+                            }`}>
+                              {c.escalation_tier}
+                            </span>
+                          </td>
+                          <td className="p-2.5">
+                            <button
+                              onClick={() => handleToggleOnCall(c)}
+                              className={`px-2 py-0.5 rounded text-[10px] font-bold transition-colors ${
+                                c.is_on_call === 1
+                                  ? 'bg-[#27a644]/20 text-[#6ee7b7] border border-[#27a644]/40 hover:bg-[#27a644]/30'
+                                  : 'bg-white/5 text-[#62666d] border border-white/10 hover:bg-white/10'
+                              }`}
+                            >
+                              {c.is_on_call === 1 ? '● ON-CALL' : '○ STANDBY'}
+                            </button>
+                          </td>
+                          <td className="p-2.5 text-[#8a8f98] text-[10px]">
+                            {c.last_notified_at ? new Date(c.last_notified_at * 1000).toLocaleTimeString() : 'Never'}
+                          </td>
+                          <td className="p-2.5 text-right">
+                            <button
+                              onClick={() => handleDeleteContact(c.id)}
+                              className="p-1 rounded text-[#62666d] hover:text-[#f87171] hover:bg-white/5 transition-colors"
+                              title="Delete Contact"
+                            >
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+
+                {/* Dispatched Alerts Audit Stream */}
+                <div className="h-32 flex-shrink-0 rounded-xl border border-[#23252a] bg-[#090a0d] p-2.5 flex flex-col">
+                  <span className="text-[10px] font-mono uppercase text-[#8a8f98] mb-1 block">
+                    Live Dispatch Audit Trail ({dispatchedAlerts.length} sent)
+                  </span>
+                  <div className="flex-1 overflow-y-auto space-y-1 pr-1 font-mono text-[10px]">
+                    {dispatchedAlerts.length === 0 ? (
+                      <span className="text-[#62666d] italic">No outbound alerts dispatched yet. Click 'Broadcast P1 Alert' to test.</span>
+                    ) : (
+                      dispatchedAlerts.map((a) => (
+                        <div key={a.id} className="p-1.5 rounded bg-black/40 border border-white/5 flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <span className="text-[#27a644] font-bold">[{a.status}]</span>
+                            <span className="text-white">{a.recipient_name} ({a.recipient_phone})</span>
+                            <span className="text-[#62666d]">via {a.channel.toUpperCase()}</span>
+                          </div>
+                          <span className="text-[#8a8f98]">{new Date(a.timestamp * 1000).toLocaleTimeString()}</span>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* VIEW: ENTERPRISE PLAYBOOKS */}
+            {activeView === 'playbooks' && (
+              <div className="h-full flex flex-col justify-between overflow-hidden space-y-3">
+                <div className="pb-2 border-b border-[#23252a] flex-shrink-0">
+                  <h3 className="text-sm font-semibold text-white flex items-center gap-2">
+                    <Zap className="h-4 w-4 text-[#fbbf24]" />
+                    <span>Autonomous Enterprise Emergency Playbooks</span>
+                  </h3>
+                  <p className="text-[11px] text-[#8a8f98]">
+                    Pre-authorized automated orchestration sequences executing end-to-end multi-agent resolution.
+                  </p>
+                </div>
+
+                {/* Playbooks Grid */}
+                <div className="grid grid-cols-3 gap-3 flex-shrink-0">
+                  {playbooks.map((pb) => (
+                    <div key={pb.id} className="p-3.5 rounded-xl border border-[#23252a] bg-[#0c0d12] flex flex-col justify-between space-y-3">
+                      <div className="space-y-1.5">
+                        <div className="flex items-center justify-between">
+                          <span className="px-1.5 py-0.2 rounded text-[9px] font-bold bg-[#5e6ad2]/20 text-[#a5afff] border border-[#5e6ad2]/30">
+                            {pb.category}
+                          </span>
+                          <span className="text-[10px] font-mono text-[#27a644]">
+                            SLA: &lt;{pb.sla_target_minutes}m
+                          </span>
+                        </div>
+                        <h4 className="font-semibold text-white text-xs">{pb.title}</h4>
+                        <p className="text-[11px] text-[#8a8f98] leading-relaxed">{pb.description}</p>
+                      </div>
+
+                      <div className="pt-2 border-t border-white/5 flex items-center justify-between">
+                        <span className="text-[10px] font-mono text-[#62666d]">{pb.steps_count} Auto-Steps</span>
+                        <button
+                          onClick={() => handleRunPlaybook(pb.id)}
+                          disabled={isExecutingPlaybook}
+                          className="px-2.5 py-1 rounded bg-[#5e6ad2] hover:bg-[#6875e5] text-white text-xs font-medium flex items-center gap-1 transition-all active:scale-95"
+                        >
+                          <Play className="h-3 w-3 fill-current" />
+                          <span>Run Playbook</span>
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Playbook Live Execution Console */}
+                <div className="flex-1 overflow-y-auto rounded-xl border border-[#23252a] bg-[#08090b] p-3 space-y-2">
+                  <span className="text-[10px] font-mono uppercase text-[#67e8f9] block">
+                    Playbook Execution Output & Multi-Agent Cascade
+                  </span>
+                  
+                  {lastExecutedPlaybook ? (
+                    <div className="space-y-2 font-mono text-xs">
+                      <div className="p-2 rounded bg-[#27a644]/10 border border-[#27a644]/30 text-[#6ee7b7]">
+                        ✓ {lastExecutedPlaybook.playbook_title} completed successfully.
+                      </div>
+                      <div className="space-y-1.5 pl-2 border-l-2 border-[#5e6ad2]">
+                        {lastExecutedPlaybook.steps_executed.map((st: string, idx: number) => (
+                          <div key={idx} className="text-[#d0d6e0] bg-black/40 p-2 rounded border border-white/5">
+                            {st}
+                          </div>
+                        ))}
+                      </div>
+                      <div className="p-2 rounded bg-black/50 text-[10px] text-[#8a8f98] truncate">
+                        Cryptographic Merkle Proof: <span className="text-[#27a644]">{lastExecutedPlaybook.audit_hash}</span>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="p-8 text-center text-xs text-[#62666d]">
+                      Click 'Run Playbook' above to simulate a full real-world enterprise emergency resolution.
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
             {/* VIEW 1: Omnichannel Timeline */}
             {activeView === 'timeline' && (
               <div className="h-full flex flex-col justify-between">
@@ -486,7 +956,7 @@ export default function App() {
                         <div className="flex items-center gap-2">
                           {channelBadge(evt.channel)}
                           <span className="font-semibold text-white">
-                            {evt.direction === 'inbound' ? 'Customer' : `${evt.agent_type.toUpperCase()} AGENT`}
+                            {evt.direction === 'inbound' ? 'Customer / Employee' : `${evt.agent_type.toUpperCase()} AGENT`}
                           </span>
                         </div>
                         <span className="text-[10px] font-mono text-[#62666d]">
@@ -795,27 +1265,16 @@ export default function App() {
         {/* Right Telemetry Drawer (Compact, high density) */}
         <aside className="w-64 flex-shrink-0 border-l border-[#23252a] bg-[#070709] p-3 space-y-3 overflow-y-auto">
           <div className="space-y-0.5">
-            <span className="text-[10px] font-mono text-[#62666d] uppercase block">Unified Customer Context</span>
-            <div className="p-2.5 rounded border border-[#23252a] bg-[#0f1013] space-y-1.5 text-xs">
-              <div>
-                <span className="font-semibold text-white block">{profile?.name || 'Alex Johnson'}</span>
-                <span className="text-[10px] font-mono text-[#8a8f98]">{profile?.customer_id || '+1-555-DEMO'}</span>
-              </div>
-              <div className="text-[11px] text-[#8a8f98] pt-1 border-t border-white/5 space-y-0.5">
-                <div className="flex justify-between">
-                  <span>Sentiment:</span>
-                  <span className="text-[#06b6d4] font-medium">{profile ? (profile.sentiment_score * 100).toFixed(0) : 94}%</span>
-                </div>
-                <div className="flex justify-between">
-                  <span>Budget Remaining:</span>
-                  <span className="text-[#f59e0b] font-medium">{profile?.interaction_budget_remaining || 1} / 2 daily</span>
-                </div>
-              </div>
+            <span className="text-[10px] font-mono text-[#62666d] uppercase block">Logged-In Officer</span>
+            <div className="p-2.5 rounded border border-[#23252a] bg-[#0f1013] space-y-1 text-xs">
+              <span className="font-semibold text-white block">{currentUser.full_name}</span>
+              <span className="text-[10px] font-mono text-[#a5afff] block">{currentUser.title}</span>
+              <span className="text-[10px] text-[#62666d] block truncate">{currentUser.email}</span>
             </div>
           </div>
 
           <div className="space-y-0.5">
-            <span className="text-[10px] font-mono text-[#62666d] uppercase block">Hardware & Infrastructure</span>
+            <span className="text-[10px] font-mono text-[#62666d] uppercase block">Active Infrastructure</span>
             <div className="p-2.5 rounded border border-[#23252a] bg-[#0f1013] space-y-1 text-[11px] font-mono text-[#8a8f98]">
               <div className="flex justify-between">
                 <span>Chiller Delta-T:</span>
@@ -826,16 +1285,34 @@ export default function App() {
                 <span className="text-[#f59e0b]">174 PSI (Venting)</span>
               </div>
               <div className="flex justify-between">
-                <span>Target AZ:</span>
-                <span className="text-white">AZ-2 (40% load)</span>
+                <span>SLA Level:</span>
+                <span className="text-[#27a644]">99.999% Tier-4</span>
               </div>
             </div>
           </div>
 
           <div className="space-y-0.5">
-            <span className="text-[10px] font-mono text-[#62666d] uppercase block">Bedrock MicroVM Routing</span>
+            <span className="text-[10px] font-mono text-[#62666d] uppercase block">Emergency Roster Status</span>
+            <div className="p-2.5 rounded border border-[#23252a] bg-[#0f1013] space-y-1 text-[11px] font-mono">
+              <div className="flex justify-between text-[#8a8f98]">
+                <span>Total Registered:</span>
+                <span className="text-white">{roster.length} Personnel</span>
+              </div>
+              <div className="flex justify-between text-[#8a8f98]">
+                <span>On-Call Duty:</span>
+                <span className="text-[#27a644] font-semibold">{roster.filter(r => r.is_on_call === 1).length} Ready</span>
+              </div>
+              <div className="flex justify-between text-[#8a8f98]">
+                <span>Primary Channel:</span>
+                <span className="text-[#67e8f9]">SMS + WhatsApp</span>
+              </div>
+            </div>
+          </div>
+
+          <div className="space-y-0.5">
+            <span className="text-[10px] font-mono text-[#62666d] uppercase block">Bedrock Agent Core</span>
             <div className="p-2 rounded border border-[#23252a] bg-[#0c0d0f] text-[10px] font-mono space-y-1">
-              <div className="text-[#a5afff]">Claude 3.5 Sonnet (Consensus)</div>
+              <div className="text-[#a5afff]">Claude 3.5 Sonnet (Debate)</div>
               <div className="text-[#06b6d4]">Claude 3.5 Haiku (Router)</div>
               <div className="text-[#27a644]">Deterministic Gate (Zero LLM)</div>
             </div>
