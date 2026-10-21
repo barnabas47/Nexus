@@ -76,13 +76,13 @@ class SupervisorAgent:
     @staticmethod
     def classify_intent(text: str) -> str:
         lowered = text.lower()
-        if any(w in lowered for w in ["help", "error", "issue", "bug", "integrate", "integration", "salesforce", "broken", "troubleshoot", "faq"]):
+        if any(w in lowered for w in ["help", "error", "issue", "bug", "integrate", "integration", "salesforce", "broken", "troubleshoot", "faq", "hiba", "gond", "probléma"]):
             return "support"
-        elif any(w in lowered for w in ["pricing", "cost", "quote", "catalog", "buy", "plan", "enterprise", "sales"]):
+        elif any(w in lowered for w in ["pricing", "cost", "quote", "catalog", "buy", "plan", "package", "árak", "csomag", "mennyibe"]):
             return "sales"
-        elif any(w in lowered for w in ["start", "welcome", "onboard", "setup", "kyc", "register", "hello", "hi"]):
+        elif any(w in lowered for w in ["start", "welcome", "onboard", "setup", "kyc", "register", "regisztráció"]):
             return "onboarding"
-        return "sales"
+        return "supervisor"
 
     @staticmethod
     def dispatch(customer_id: str, channel: str, agent_type: str, text: str) -> Dict[str, Any]:
@@ -100,4 +100,49 @@ class SupervisorAgent:
             from backend.agents.onboarding_agent import OnboardingAgent
             return OnboardingAgent.handle(customer_id, channel, text)
         else:
-            return {"status": "error", "message": "Unknown agent delegation"}
+            # Default / General Supervisor with contextual AI
+            from backend.core.llm_client import LLMClient
+            llm_res = LLMClient.query(
+                prompt=text,
+                system_prompt="You are NexusAI Enterprise Operations Supervisor. Provide concise, direct answers. Respond in the user's language.",
+                tier="fast"
+            )
+            reply_text = llm_res.get("text", "NexusAI Omnichannel Platform active. How can I assist you?")
+
+            response = AgentResponse(
+                agent_name="SupervisorAgent",
+                text_content=reply_text,
+                metadata={}
+            )
+
+            target_channel = channel if channel in ["rcs", "whatsapp", "sms", "ses"] else "rcs"
+            if target_channel == "whatsapp":
+                channel_payload = whatsapp_adapter.adapt(response, customer_id)
+            elif target_channel == "sms":
+                channel_payload = sms_adapter.adapt(response, customer_id)
+            elif target_channel == "ses":
+                channel_payload = ses_adapter.adapt(response, customer_id)
+            else:
+                channel_payload = rcs_adapter.adapt(response, customer_id)
+
+            outbound_event = MessageEvent(
+                event_id=f"EVT-OUT-{uuid.uuid4().hex[:8]}",
+                customer_id=customer_id,
+                timestamp=time.time(),
+                channel=target_channel,
+                direction="outbound",
+                agent_type="supervisor",
+                content=response.text_content,
+                rich_payload=channel_payload.payload,
+                sentiment="positive",
+                sentiment_score=0.95
+            )
+            memory.append_message(outbound_event)
+
+            return {
+                "status": "success",
+                "agent": "supervisor",
+                "channel": target_channel,
+                "preview": channel_payload.preview_text,
+                "payload": channel_payload.payload
+            }

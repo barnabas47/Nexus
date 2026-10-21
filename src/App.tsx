@@ -6,7 +6,7 @@ import {
   DollarSign, FileText, Network, Server, Lock, Layers,
   ChevronRight, ArrowRight, CornerDownRight, Check, X, Shield, RefreshCw,
   Phone, Users, Plus, Trash2, Radio, Bell, Key, Sliders, CheckCircle2,
-  Pause, SkipForward, RotateCcw, Sparkles, Terminal, Activity
+  Pause, SkipForward, RotateCcw, Sparkles, Terminal, Activity, ChevronDown
 } from 'lucide-react';
 import { LiveAIInspector } from './components/ui/live-ai-inspector';
 import { LiveScenarioStage } from './components/ui/live-scenario-stage';
@@ -216,6 +216,7 @@ export default function App() {
 
   // Live Scenario Simulator Stage
   const [showLiveStage, setShowLiveStage] = useState(false);
+  const [showActionsMenu, setShowActionsMenu] = useState(false);
 
   // Guided Tour State Machine
   const [isTourActive, setIsTourActive] = useState(false);
@@ -714,7 +715,7 @@ export default function App() {
 
   return (
     <div className="h-screen w-screen overflow-hidden bg-[#010102] text-[#f7f8f8] flex flex-col font-sans select-none">
-      {/* 1. Header Toolbar with Enterprise Multi-Tenant & User Session */}
+      {/* 1. Header Toolbar with Streamlined Linear Aesthetic */}
       <header className="h-12 flex-shrink-0 border-b border-[#23252a] bg-[#070709] px-4 flex items-center justify-between z-30">
         <div className="flex items-center gap-3">
           <div className="flex h-7 w-7 items-center justify-center rounded-md bg-[#0f1011] border border-[#2e3038] shadow-[inset_0_1px_0_rgba(255,255,255,0.1)]">
@@ -732,31 +733,28 @@ export default function App() {
 
           <div className="h-4 w-[1px] bg-[#23252a] mx-1" />
 
-          {/* User Session Switcher */}
-          <div className="flex items-center gap-2">
-            <span className="text-[10px] font-mono text-[#62666d]">SESSION:</span>
-            <select
-              value={currentUser.id}
-              onChange={(e) => handleSwitchUser(e.target.value)}
-              className="bg-[#0f1011] hover:bg-[#151619] border border-[#23252a] text-[11px] font-mono text-[#d0d6e0] rounded px-2.5 py-1 focus:outline-none focus:border-[#5e6ad2] transition-colors cursor-pointer"
-            >
-              {availableUsers.map((u) => (
-                <option key={u.id} value={u.id}>
-                  {u.full_name} · {u.role === 'INCIDENT_COMMANDER' ? 'VP Commander' : u.role === 'FIELD_ENGINEER' ? 'Lead SRE' : u.role === 'CFO_FINOPS_LEAD' ? 'CFO' : 'Auditor'} ({u.tenant_id === 'tenant-cloudscale' ? 'CloudScale DC' : 'Apex Health'})
-                </option>
-              ))}
-            </select>
-          </div>
-
           {/* Active Tenant Badge */}
-          <span className="hidden lg:inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[10px] font-mono bg-[#14151a] text-[#8a8f98] border border-[#23252a]">
+          <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[10px] font-mono bg-[#14151a] text-[#8a8f98] border border-[#23252a]">
             <span className="h-1.5 w-1.5 rounded-full bg-[#27a644]" />
-            {selectedTenant === 'tenant-cloudscale' ? 'CloudScale Datacenters (Tier-4 Frankfurt)' : 'Apex Health Care (HIPAA Virginia)'}
+            {selectedTenant === 'tenant-cloudscale' ? 'CloudScale DC' : 'Apex Health'}
           </span>
+
+          {/* User Session Switcher */}
+          <select
+            value={currentUser.id}
+            onChange={(e) => handleSwitchUser(e.target.value)}
+            className="bg-[#0f1011] hover:bg-[#151619] border border-[#23252a] text-[11px] font-mono text-[#d0d6e0] rounded px-2 py-1 focus:outline-none focus:border-[#5e6ad2] transition-colors cursor-pointer"
+          >
+            {availableUsers.map((u) => (
+              <option key={u.id} value={u.id}>
+                {u.full_name} ({u.role === 'INCIDENT_COMMANDER' ? 'VP Commander' : u.role === 'FIELD_ENGINEER' ? 'Lead SRE' : u.role === 'CFO_FINOPS_LEAD' ? 'CFO' : 'Auditor'})
+              </option>
+            ))}
+          </select>
         </div>
 
         {/* Global Action Strip */}
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2.5 relative">
           {actionNotice && (
             <motion.span
               initial={{ opacity: 0, x: 10 }}
@@ -767,9 +765,20 @@ export default function App() {
             </motion.span>
           )}
 
+          {/* Interactive Simulator — Primary Hero Action */}
+          <button
+            onClick={() => setShowLiveStage(true)}
+            className="inline-flex items-center gap-1.5 rounded-md px-3 py-1 text-xs font-mono font-medium text-white transition-all bg-[#0284c7] hover:bg-[#0369a1] border border-cyan-400/40 shadow-[0_0_14px_rgba(2,132,199,0.3)] active:scale-[0.98]"
+            title="Launch Interactive Omnichannel Incident Simulator"
+          >
+            <Terminal className="h-3.5 w-3.5 text-cyan-200" />
+            <span>Interactive Simulator</span>
+          </button>
+
+          {/* BYOK & Live Model Button */}
           <button
             onClick={() => setShowKeyModal(true)}
-            className={`inline-flex items-center gap-1.5 rounded px-2.5 py-1 text-xs font-mono font-medium transition-colors border ${
+            className={`inline-flex items-center gap-1.5 rounded-md px-2.5 py-1 text-xs font-mono font-medium transition-colors border ${
               keySettings?.provider === 'anthropic' || keySettings?.provider === 'openai'
                 ? 'border-[#27a644]/40 bg-[#27a644]/15 text-[#6ee7b7] shadow-[0_0_12px_rgba(39,166,68,0.2)]'
                 : 'border-[#2e3038] bg-[#121316] hover:bg-[#1a1b20] text-[#d0d6e0]'
@@ -777,49 +786,97 @@ export default function App() {
             title="Configure Live Anthropic / OpenAI Keys & Token Optimizer"
           >
             <Key className="h-3.5 w-3.5 text-[#5e6ad2]" />
-            <span>{keySettings?.provider === 'anthropic' ? '[LIVE] Claude 3.5 Active' : keySettings?.provider === 'openai' ? '[LIVE] GPT-4o Active' : 'AI Engine (BYOK)'}</span>
+            <span>{keySettings?.provider === 'anthropic' ? '[LIVE] Claude' : keySettings?.provider === 'openai' ? '[LIVE] GPT-4o' : 'AI Engine (BYOK)'}</span>
           </button>
 
-          <button
-            onClick={() => setShowLiveStage(true)}
-            className="inline-flex items-center gap-1.5 rounded px-2.5 py-1 text-xs font-mono font-medium text-white transition-all bg-[#1e293b] hover:bg-[#334155] border border-white/[0.12] shadow-sm active:scale-[0.98]"
-            title="Launch Interactive Omnichannel Incident Simulator"
-          >
-            <Terminal className="h-3.5 w-3.5 text-[#38bdf8]" />
-            <span>Interactive Simulator</span>
-          </button>
+          {/* Scenarios & Tests Dropdown Menu */}
+          <div className="relative">
+            <button
+              onClick={() => setShowActionsMenu(!showActionsMenu)}
+              className="inline-flex items-center gap-1.5 rounded-md px-2.5 py-1 text-xs font-mono font-medium border border-[#2e3038] bg-[#121316] hover:bg-[#1a1b20] text-[#d0d6e0] transition-colors"
+              title="Open Scenarios & Testing Suite"
+            >
+              <Activity className="h-3.5 w-3.5 text-[#a5afff]" />
+              <span>Scenarios & Tests</span>
+              <ChevronDown className="h-3 w-3 text-[#8a8f98]" />
+            </button>
 
-          <button
-            onClick={startGuidedTour}
-            disabled={isLoading}
-            className={`inline-flex items-center gap-1.5 rounded px-2.5 py-1 text-xs font-mono font-medium text-white transition-all border ${
-              isTourActive
-                ? 'border-[#10b981]/50 bg-[#10b981]/20 text-[#6ee7b7] animate-pulse'
-                : 'border-white/[0.1] bg-white/[0.04] hover:bg-white/[0.08] text-[#cbd5e1]'
-            }`}
-            title="Automated Walkthrough Tour"
-          >
-            <Activity className="h-3.5 w-3.5" />
-            <span>{isTourActive ? 'Tour Active' : 'Quick Walkthrough'}</span>
-          </button>
+            {showActionsMenu && (
+              <div 
+                className="absolute right-0 mt-2 w-72 rounded-lg border border-[#2e3038] bg-[#0c0d12] shadow-2xl py-1.5 z-50 text-xs font-sans"
+                onClick={() => setShowActionsMenu(false)}
+              >
+                <div className="px-3 py-1 text-[10px] font-mono text-[#62666d] uppercase tracking-wider border-b border-[#1f2025]">
+                  Automated Scenarios
+                </div>
 
-          <button
-            onClick={() => triggerRedTeam('prompt_injection')}
-            title="Red-Team: Test prompt injection honeypot trapping"
-            className="inline-flex items-center gap-1 rounded border border-[#ef4444]/30 bg-[#1f1011] hover:bg-[#2c1416] px-2 py-1 text-xs font-medium text-[#f87171] transition-colors"
-          >
-            <ShieldAlert className="h-3 w-3" />
-            <span>Inject Test</span>
-          </button>
+                <button
+                  onClick={() => { triggerJudgeDemo(); setShowActionsMenu(false); }}
+                  className="w-full text-left px-3 py-2 hover:bg-[#16171d] text-white flex items-start gap-2.5 transition-colors"
+                >
+                  <Play className="h-4 w-4 text-[#27a644] mt-0.5 flex-shrink-0" />
+                  <div>
+                    <div className="font-medium text-[12px]">1-Click Judge Demo</div>
+                    <div className="text-[10px] text-[#8a8f98]">Synthesize 10-step full omnichannel journey</div>
+                  </div>
+                </button>
 
-          <button
-            onClick={() => triggerRedTeam('budget_exceeded')}
-            title="Red-Team: Test interaction budget code gate"
-            className="inline-flex items-center gap-1 rounded border border-[#382b19] bg-[#1a140b] hover:bg-[#261e10] px-2 py-1 text-xs font-medium text-[#fbbf24] transition-colors"
-          >
-            <AlertTriangle className="h-3 w-3" />
-            <span>Budget Test</span>
-          </button>
+                <button
+                  onClick={() => { startGuidedTour(); setShowActionsMenu(false); }}
+                  className="w-full text-left px-3 py-2 hover:bg-[#16171d] text-white flex items-start gap-2.5 transition-colors"
+                >
+                  <Activity className="h-4 w-4 text-[#38bdf8] mt-0.5 flex-shrink-0" />
+                  <div>
+                    <div className="font-medium text-[12px]">Guided Walkthrough Tour</div>
+                    <div className="text-[10px] text-[#8a8f98]">Interactive walkthrough highlighting key modules</div>
+                  </div>
+                </button>
+
+                <div className="px-3 py-1 text-[10px] font-mono text-[#62666d] uppercase tracking-wider border-y border-[#1f2025] mt-1">
+                  Red Team Security Gates
+                </div>
+
+                <button
+                  onClick={() => { triggerRedTeam('prompt_injection'); setShowActionsMenu(false); }}
+                  className="w-full text-left px-3 py-2 hover:bg-[#16171d] text-white flex items-start gap-2.5 transition-colors"
+                >
+                  <ShieldAlert className="h-4 w-4 text-[#f87171] mt-0.5 flex-shrink-0" />
+                  <div>
+                    <div className="font-medium text-[12px]">Prompt Injection Defense</div>
+                    <div className="text-[10px] text-[#8a8f98]">Test honeypot trapping of adversarial prompt</div>
+                  </div>
+                </button>
+
+                <button
+                  onClick={() => { triggerRedTeam('budget_exceeded'); setShowActionsMenu(false); }}
+                  className="w-full text-left px-3 py-2 hover:bg-[#16171d] text-white flex items-start gap-2.5 transition-colors"
+                >
+                  <AlertTriangle className="h-4 w-4 text-[#fbbf24] mt-0.5 flex-shrink-0" />
+                  <div>
+                    <div className="font-medium text-[12px]">Interaction Budget Gate</div>
+                    <div className="text-[10px] text-[#8a8f98]">Verify frequency caps ("Silence is the Product")</div>
+                  </div>
+                </button>
+
+                <button
+                  onClick={() => { triggerRedTeam('negative_sentiment'); setShowActionsMenu(false); }}
+                  className="w-full text-left px-3 py-2 hover:bg-[#16171d] text-white flex items-start gap-2.5 transition-colors"
+                >
+                  <ShieldCheck className="h-4 w-4 text-[#ec4899] mt-0.5 flex-shrink-0" />
+                  <div>
+                    <div className="font-medium text-[12px]">Sentiment Escalation & Veto</div>
+                    <div className="text-[10px] text-[#8a8f98]">Trigger emergency takeover & safety gate</div>
+                  </div>
+                </button>
+              </div>
+            )}
+          </div>
+
+          {/* Minimal SLA Latency Pill */}
+          <span className="text-[11px] font-mono text-[#8a8f98] flex items-center gap-1.5 px-2 py-1 rounded bg-[#0f1011] border border-[#23252a]">
+            <span className="h-1.5 w-1.5 rounded-full bg-[#27a644]" />
+            {liveLatency}ms
+          </span>
         </div>
       </header>
 

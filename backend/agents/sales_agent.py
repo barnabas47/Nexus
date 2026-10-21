@@ -5,6 +5,7 @@ from backend.channels.adapter import AgentResponse
 from backend.channels.rcs_adapter import RCSAdapter
 from backend.channels.sms_adapter import SMSAdapter
 from backend.core.memory import memory, MessageEvent
+from backend.core.llm_client import LLMClient
 
 rcs_adapter = RCSAdapter()
 sms_adapter = SMSAdapter()
@@ -14,37 +15,44 @@ class SalesAgent:
 
     @staticmethod
     def handle(customer_id: str, channel: str, text: str) -> Dict[str, Any]:
-        response = AgentResponse(
-            agent_name="SalesAgent",
-            text_content="Here are the tailored enterprise communication packages for your infrastructure:",
-            metadata={
-                "cards": [
-                    {
-                        "title": "Nexus Enterprise Cloud",
-                        "description": "Unlimited RCS/WhatsApp sessions, dedicated Bedrock AgentCore microVM, 99.99% SLA.",
-                        "media_url": "https://images.unsplash.com/photo-1551288049-bebda4e38f71?auto=format&fit=crop&w=600&q=80",
-                        "price": "$499/mo",
-                        "buttons": [
-                            {"type": "action", "label": "Select Enterprise Plan", "postback": "select_enterprise"},
-                            {"type": "action", "label": "Book Solutions Architect", "postback": "schedule_demo"}
-                        ]
-                    },
-                    {
-                        "title": "Nexus Growth Suite",
-                        "description": "Up to 50k monthly sessions, auto fallback to SMS, standard Bedrock agent runtime.",
-                        "media_url": "https://images.unsplash.com/photo-1460925895917-afdab827c52f?auto=format&fit=crop&w=600&q=80",
-                        "price": "$199/mo",
-                        "buttons": [
-                            {"type": "action", "label": "Select Growth Plan", "postback": "select_growth"}
-                        ]
-                    }
-                ],
-                "chips": [
-                    {"label": "Select Enterprise ($499)", "data": "select_enterprise"},
-                    {"label": "Compare AWS CDS Features", "data": "compare_features"},
-                    {"label": "Talk to Specialist", "data": "talk_specialist"}
+        llm_res = LLMClient.query(
+            prompt=text,
+            system_prompt="You are NexusAI Enterprise Sales Specialist. Provide helpful, concise information on packages, pricing, and infrastructure. Respond in the customer's language.",
+            tier="fast"
+        )
+        reply_text = llm_res.get("text", "Here are the tailored enterprise communication packages for your infrastructure:")
+
+        lowered = text.lower()
+        needs_cards = any(w in lowered for w in ["pricing", "cost", "quote", "catalog", "buy", "plan", "package", "ár", "árak", "csomag", "mennyibe", "tier"])
+
+        cards = [
+            {
+                "title": "Nexus Enterprise Cloud",
+                "description": "Unlimited RCS/WhatsApp sessions, dedicated Bedrock AgentCore microVM, 99.99% SLA.",
+                "media_url": "https://images.unsplash.com/photo-1551288049-bebda4e38f71?auto=format&fit=crop&w=600&q=80",
+                "price": "$499/mo",
+                "buttons": [
+                    {"type": "action", "label": "Select Enterprise Plan", "postback": "select_enterprise"},
+                    {"type": "action", "label": "Book Solutions Architect", "postback": "schedule_demo"}
+                ]
+            },
+            {
+                "title": "Nexus Growth Suite",
+                "description": "Up to 50k monthly sessions, auto fallback to SMS, standard Bedrock agent runtime.",
+                "media_url": "https://images.unsplash.com/photo-1460925895917-afdab827c52f?auto=format&fit=crop&w=600&q=80",
+                "price": "$199/mo",
+                "buttons": [
+                    {"type": "action", "label": "Select Growth Plan", "postback": "select_growth"}
                 ]
             }
+        ] if needs_cards else []
+
+        metadata = {"cards": cards} if cards else {}
+
+        response = AgentResponse(
+            agent_name="SalesAgent",
+            text_content=reply_text,
+            metadata=metadata
         )
 
         # Adapt payload to requested channel

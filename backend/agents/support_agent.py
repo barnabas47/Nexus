@@ -4,6 +4,7 @@ from typing import Dict, Any
 from backend.channels.adapter import AgentResponse
 from backend.channels.whatsapp_adapter import WhatsAppAdapter
 from backend.core.memory import memory, MessageEvent
+from backend.core.llm_client import LLMClient
 
 whatsapp_adapter = WhatsAppAdapter()
 
@@ -19,10 +20,12 @@ class SupportAgent:
                 "All conversation states, unified memory, and customer sentiment scores sync bidirectionally in under 200ms."
             )
         else:
-            reply_text = (
-                f"Nexus Technical Support: We have verified your telemetry. "
-                f"All AWS EUM and Bedrock AgentCore pipes are healthy. How can we assist further?"
+            llm_res = LLMClient.query(
+                prompt=text,
+                system_prompt="You are NexusAI Technical Support Engineer. Provide clear, direct solutions to infrastructure or integration queries. Respond in the user's language.",
+                tier="fast"
             )
+            reply_text = llm_res.get("text", "Nexus Technical Support: Telemetry verified. All channels are operating within SLA.")
 
         response = AgentResponse(
             agent_name="SupportAgent",
