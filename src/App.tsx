@@ -5,7 +5,8 @@ import {
   CheckCircle, Database, Globe, ShieldCheck, Zap,
   DollarSign, FileText, Network, Server, Lock, Layers,
   ChevronRight, ArrowRight, CornerDownRight, Check, X, Shield, RefreshCw,
-  Phone, Users, Plus, Trash2, Radio, Bell, Key, Sliders, CheckCircle2
+  Phone, Users, Plus, Trash2, Radio, Bell, Key, Sliders, CheckCircle2,
+  Pause, SkipForward, RotateCcw, Sparkles
 } from 'lucide-react';
 import { LiveAIInspector } from './components/ui/live-ai-inspector';
 
@@ -212,6 +213,105 @@ export default function App() {
   const [tieringOpt, setTieringOpt] = useState(true);
   const [maxTokensOpt, setMaxTokensOpt] = useState(350);
 
+  // Guided Tour State Machine
+  const [isTourActive, setIsTourActive] = useState(false);
+  const [tourStep, setTourStep] = useState(0);
+  const [isTourPaused, setIsTourPaused] = useState(false);
+  const [tourTimerProgress, setTourTimerProgress] = useState(0);
+
+  const TOUR_STEPS = [
+    {
+      index: 0,
+      view: 'timeline' as const,
+      title: '1. Cross-Channel Incident Ingestion',
+      badge: 'WhatsApp & SMS Webhook',
+      desc: 'Critical hardware cooling alert arrives via WhatsApp and SMS webhooks. The Supervisor Agent processes sentiment and registers the event into unified DynamoDB memory.',
+      actionName: 'Ingesting Omnichannel Stream...'
+    },
+    {
+      index: 1,
+      view: 'roster' as const,
+      title: '2. Automated On-Call Team Dispatch',
+      badge: 'AWS EUM & Twilio Roster',
+      desc: 'The platform scans the registered enterprise employee roster, finds Lead SRE Marcus Vance on-call, and broadcasts emergency dispatch alerts via SMS and WhatsApp.',
+      actionName: 'Broadcasting P1 Emergency Alert to Roster...'
+    },
+    {
+      index: 2,
+      view: 'consensus' as const,
+      title: '3. Multi-Agent Blind Deliberation & Safety Veto',
+      badge: 'Anti-Sycophancy Engine',
+      desc: 'Three independent models (SRE, FinOps, Compliance) deliberate without peer exposure. Compliance Sentinel raises NFPA-75 Safety VETO, blocking human entry until depressurization.',
+      actionName: 'Evaluating Blind Consensus...'
+    },
+    {
+      index: 3,
+      view: 'a2a' as const,
+      title: '4. Agent-to-Agent (A2A) Autonomous Negotiation',
+      badge: 'JSON-RPC 2.0 Circuit Breaker',
+      desc: 'Nexus Procurement Agent negotiates with Carrier supplier bot, slashing price from $2,300 to $1,780 with guaranteed 45-minute delivery before 3-turn circuit breaker terminates.',
+      actionName: 'Running Autonomous Procurement Alku...'
+    },
+    {
+      index: 4,
+      view: 'timeline' as const,
+      title: '5. Executive One-Tap Sign-Off',
+      badge: 'Code Gate Authorization',
+      desc: 'Sarah Chen (VP) authorizes the $1,780 PO. "Prompt says Yes, Code says No"—money never moves without cryptographic sign-off.',
+      actionName: 'Executing VP Executive Sign-Off...'
+    },
+    {
+      index: 5,
+      view: 'audit' as const,
+      title: '6. Cryptographic SHA-256 Audit Ledger',
+      badge: 'Immutable SOC 2 Chain',
+      desc: 'Every single event, negotiation turn, and sign-off is committed into a tamper-evident SHA-256 Merkle chain for ISO/SOC 2 compliance.',
+      actionName: 'Verifying Audit Chain Integrity...'
+    },
+    {
+      index: 6,
+      view: 'finops' as const,
+      title: '7. Real-Time FinOps Token Burn & ROI',
+      badge: 'Token Attribution Engine',
+      desc: 'Total LLM inference cost: $0.02 USD. Downtime loss averted: $42,500 USD (2,125x ROI). Model tiering (Haiku router + Sonnet consensus) saved 90% of tokens.',
+      actionName: 'Reviewing Token Attribution & Savings...'
+    }
+  ];
+
+  const startGuidedTour = async () => {
+    setIsTourActive(true);
+    setTourStep(0);
+    setIsTourPaused(false);
+    setTourTimerProgress(0);
+    setActiveView('timeline');
+    notify("▶ Starting Live Autonomous Judge Walkthrough...");
+    try {
+      await fetch('/api/demo/run', { method: 'POST' });
+      await fetchState();
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const advanceTourStep = async (nextIndex: number) => {
+    if (nextIndex >= TOUR_STEPS.length) {
+      setIsTourActive(false);
+      notify("🎉 Live Judge Walkthrough completed! You now have full manual control.");
+      return;
+    }
+    const targetStep = TOUR_STEPS[nextIndex];
+    setTourStep(nextIndex);
+    setActiveView(targetStep.view);
+    setTourTimerProgress(0);
+
+    // Auto action per step
+    if (nextIndex === 1) {
+      handleBroadcastAlert();
+    } else if (nextIndex === 4) {
+      executeSignoff();
+    }
+  };
+
   const [signoffCompleted, setSignoffCompleted] = useState(false);
   const [inputText, setInputText] = useState('');
   const [selectedChannel, setSelectedChannel] = useState<'rcs' | 'sms' | 'whatsapp' | 'ses'>('rcs');
@@ -337,6 +437,20 @@ export default function App() {
     const interval = setInterval(fetchState, 4000);
     return () => clearInterval(interval);
   }, [selectedTenant]);
+
+  useEffect(() => {
+    if (!isTourActive || isTourPaused) return;
+    const interval = setInterval(() => {
+      setTourTimerProgress((prev) => {
+        if (prev >= 100) {
+          advanceTourStep(tourStep + 1);
+          return 0;
+        }
+        return prev + 2.5; // ~4 seconds per step
+      });
+    }, 100);
+    return () => clearInterval(interval);
+  }, [isTourActive, isTourPaused, tourStep]);
 
   const handleSwitchUser = async (userId: string) => {
     try {
@@ -663,12 +777,16 @@ export default function App() {
           </button>
 
           <button
-            onClick={triggerJudgeDemo}
+            onClick={startGuidedTour}
             disabled={isLoading}
-            className="inline-flex items-center gap-1.5 rounded bg-[#5e6ad2] hover:bg-[#6875e5] px-2.5 py-1 text-xs font-medium text-white transition-all shadow-[0_1px_2px_rgba(0,0,0,0.5)] active:scale-[0.98]"
+            className={`inline-flex items-center gap-1.5 rounded px-2.5 py-1 text-xs font-semibold text-white transition-all shadow-md active:scale-[0.98] ${
+              isTourActive
+                ? 'bg-[#27a644] animate-pulse'
+                : 'bg-gradient-to-r from-[#5e6ad2] to-[#8b5cf6] hover:from-[#6b77e5] hover:to-[#9a6eff]'
+            }`}
           >
-            <Play className="h-3 w-3 fill-current" />
-            <span>Judge Demo</span>
+            <Sparkles className="h-3.5 w-3.5 fill-current" />
+            <span>{isTourActive ? 'Tour Playing...' : 'Judge Demo Tour'}</span>
           </button>
 
           <button
@@ -1591,6 +1709,85 @@ export default function App() {
               </div>
             </motion.div>
           </div>
+        )}
+      </AnimatePresence>
+
+      {/* 4. Live Autonomous Judge Walkthrough Spotlight Bubble */}
+      <AnimatePresence>
+        {isTourActive && (
+          <motion.div
+            initial={{ opacity: 0, y: 35, scale: 0.95 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 25, scale: 0.95 }}
+            className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 w-[580px] max-w-[95vw] rounded-2xl border border-[#5e6ad2]/60 bg-[#07080d]/95 backdrop-blur-2xl shadow-[0_16px_50px_rgba(94,106,210,0.4)] p-4 flex flex-col gap-2.5"
+          >
+            {/* Top Bar: Progress and Step Badge */}
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <span className="relative flex h-2 w-2">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#27a644] opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-[#27a644]"></span>
+                </span>
+                <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-[#a5afff]">
+                  Interactive Judge Demo · Step {tourStep + 1} of {TOUR_STEPS.length}
+                </span>
+                <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-[#5e6ad2]/20 text-[#c7d2fe] border border-[#5e6ad2]/30">
+                  {TOUR_STEPS[tourStep].badge}
+                </span>
+              </div>
+              <button
+                onClick={() => setIsTourActive(false)}
+                className="text-[#8a8f98] hover:text-white p-1 rounded transition-colors"
+                title="Exit Tour"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            {/* Timer Progress Bar */}
+            <div className="h-1 w-full bg-white/10 rounded-full overflow-hidden">
+              <div
+                className="h-full bg-gradient-to-r from-[#5e6ad2] via-[#8b5cf6] to-[#27a644] transition-all duration-100 ease-linear"
+                style={{ width: `${tourTimerProgress}%` }}
+              />
+            </div>
+
+            {/* Title & Description Bubble */}
+            <div>
+              <h4 className="text-sm font-bold text-white flex items-center gap-1.5">
+                <Sparkles className="h-3.5 w-3.5 text-[#fbbf24] fill-current" />
+                <span>{TOUR_STEPS[tourStep].title}</span>
+              </h4>
+              <p className="text-xs text-[#d0d6e0] leading-relaxed mt-1">
+                {TOUR_STEPS[tourStep].desc}
+              </p>
+            </div>
+
+            {/* Bottom Controls */}
+            <div className="flex items-center justify-between pt-2 border-t border-white/10 text-xs">
+              <span className="text-[10px] font-mono text-[#67e8f9] animate-pulse truncate max-w-[260px]">
+                ⚡ {TOUR_STEPS[tourStep].actionName}
+              </span>
+
+              <div className="flex items-center gap-1.5">
+                <button
+                  onClick={() => setIsTourPaused(!isTourPaused)}
+                  className="px-2.5 py-1 rounded-md border border-[#2e3038] bg-[#14151b] hover:bg-[#1e2029] font-medium text-white flex items-center gap-1 transition-colors"
+                >
+                  {isTourPaused ? <Play className="h-3 w-3 fill-current" /> : <Pause className="h-3 w-3 fill-current" />}
+                  <span>{isTourPaused ? 'Resume' : 'Pause'}</span>
+                </button>
+
+                <button
+                  onClick={() => advanceTourStep(tourStep + 1)}
+                  className="px-3 py-1 rounded-md bg-[#5e6ad2] hover:bg-[#6875e5] font-semibold text-white flex items-center gap-1 transition-all shadow-sm active:scale-95"
+                >
+                  <span>{tourStep === TOUR_STEPS.length - 1 ? 'Finish' : 'Next Step'}</span>
+                  <SkipForward className="h-3 w-3 fill-current" />
+                </button>
+              </div>
+            </div>
+          </motion.div>
         )}
       </AnimatePresence>
     </div>
