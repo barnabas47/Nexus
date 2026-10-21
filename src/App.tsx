@@ -289,7 +289,7 @@ export default function App() {
     setIsTourPaused(false);
     setTourTimerProgress(0);
     setActiveView('timeline');
-    notify("▶ Starting Live Autonomous Judge Walkthrough...");
+    notify("[START] Live Autonomous Judge Walkthrough active.");
     try {
       await fetch('/api/demo/run', { method: 'POST' });
       await fetchState();
@@ -733,12 +733,6 @@ export default function App() {
 
           <div className="h-4 w-[1px] bg-[#23252a] mx-1" />
 
-          {/* Active Tenant Badge */}
-          <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[10px] font-mono bg-[#14151a] text-[#8a8f98] border border-[#23252a]">
-            <span className="h-1.5 w-1.5 rounded-full bg-[#27a644]" />
-            {selectedTenant === 'tenant-cloudscale' ? 'CloudScale DC' : 'Apex Health'}
-          </span>
-
           {/* User Session Switcher */}
           <select
             value={currentUser.id}
@@ -754,7 +748,7 @@ export default function App() {
         </div>
 
         {/* Global Action Strip */}
-        <div className="flex items-center gap-2.5 relative">
+        <div className="flex items-center gap-2 relative">
           {actionNotice && (
             <motion.span
               initial={{ opacity: 0, x: 10 }}
@@ -765,28 +759,24 @@ export default function App() {
             </motion.span>
           )}
 
-          {/* Interactive Simulator — Primary Hero Action */}
+          {/* Interactive Simulator — Unified Clean Monochrome Style */}
           <button
             onClick={() => setShowLiveStage(true)}
-            className="inline-flex items-center gap-1.5 rounded-md px-3 py-1 text-xs font-mono font-medium text-white transition-all bg-[#0284c7] hover:bg-[#0369a1] border border-cyan-400/40 shadow-[0_0_14px_rgba(2,132,199,0.3)] active:scale-[0.98]"
+            className="inline-flex items-center gap-1.5 rounded-md px-2.5 py-1 text-xs font-mono font-medium border border-[#2e3038] bg-[#121316] hover:bg-[#1a1b20] text-[#d0d6e0] transition-colors"
             title="Launch Interactive Omnichannel Incident Simulator"
           >
-            <Terminal className="h-3.5 w-3.5 text-cyan-200" />
+            <Terminal className="h-3.5 w-3.5 text-[#8a8f98]" />
             <span>Interactive Simulator</span>
           </button>
 
-          {/* BYOK & Live Model Button */}
+          {/* Choose AI Button */}
           <button
             onClick={() => setShowKeyModal(true)}
-            className={`inline-flex items-center gap-1.5 rounded-md px-2.5 py-1 text-xs font-mono font-medium transition-colors border ${
-              keySettings?.provider === 'anthropic' || keySettings?.provider === 'openai'
-                ? 'border-[#27a644]/40 bg-[#27a644]/15 text-[#6ee7b7] shadow-[0_0_12px_rgba(39,166,68,0.2)]'
-                : 'border-[#2e3038] bg-[#121316] hover:bg-[#1a1b20] text-[#d0d6e0]'
-            }`}
+            className="inline-flex items-center gap-1.5 rounded-md px-2.5 py-1 text-xs font-mono font-medium border border-[#2e3038] bg-[#121316] hover:bg-[#1a1b20] text-[#d0d6e0] transition-colors"
             title="Configure Live Anthropic / OpenAI Keys & Token Optimizer"
           >
-            <Key className="h-3.5 w-3.5 text-[#5e6ad2]" />
-            <span>{keySettings?.provider === 'anthropic' ? '[LIVE] Claude' : keySettings?.provider === 'openai' ? '[LIVE] GPT-4o' : 'AI Engine (BYOK)'}</span>
+            <Key className="h-3.5 w-3.5 text-[#8a8f98]" />
+            <span>Choose AI</span>
           </button>
 
           {/* Scenarios & Tests Dropdown Menu */}
@@ -796,7 +786,7 @@ export default function App() {
               className="inline-flex items-center gap-1.5 rounded-md px-2.5 py-1 text-xs font-mono font-medium border border-[#2e3038] bg-[#121316] hover:bg-[#1a1b20] text-[#d0d6e0] transition-colors"
               title="Open Scenarios & Testing Suite"
             >
-              <Activity className="h-3.5 w-3.5 text-[#a5afff]" />
+              <Activity className="h-3.5 w-3.5 text-[#8a8f98]" />
               <span>Scenarios & Tests</span>
               <ChevronDown className="h-3 w-3 text-[#8a8f98]" />
             </button>
@@ -871,12 +861,6 @@ export default function App() {
               </div>
             )}
           </div>
-
-          {/* Minimal SLA Latency Pill */}
-          <span className="text-[11px] font-mono text-[#8a8f98] flex items-center gap-1.5 px-2 py-1 rounded bg-[#0f1011] border border-[#23252a]">
-            <span className="h-1.5 w-1.5 rounded-full bg-[#27a644]" />
-            {liveLatency}ms
-          </span>
         </div>
       </header>
 
@@ -1099,7 +1083,7 @@ export default function App() {
                                   : 'bg-white/5 text-[#62666d] border border-white/10 hover:bg-white/10'
                               }`}
                             >
-                              {c.is_on_call === 1 ? '● ON-CALL' : '○ STANDBY'}
+                              {c.is_on_call === 1 ? '[ON-CALL]' : '[STANDBY]'}
                             </button>
                           </td>
                           <td className="p-2.5 text-[#8a8f98] text-[10px]">
@@ -1372,7 +1356,7 @@ export default function App() {
                     <div key={t.turn_index} className="p-3 rounded border border-[#23252a] bg-[#0d0e12] space-y-1.5">
                       <div className="flex items-center justify-between text-xs font-mono">
                         <span className="text-[#06b6d4] font-semibold">Turn #{t.turn_index}: {t.rpc_method}</span>
-                        <span className="text-[#62666d]">{t.sender} → {t.receiver}</span>
+                        <span className="text-[#62666d]">{t.sender} -&gt; {t.receiver}</span>
                       </div>
                       <pre className="p-2 rounded bg-black/50 text-[10px] font-mono text-[#67e8f9] overflow-x-auto">
                         {JSON.stringify(t.payload, null, 2)}
@@ -1795,14 +1779,11 @@ export default function App() {
             {/* Top Bar: Progress and Step Badge */}
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <span className="relative flex h-2 w-2">
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#27a644] opacity-75"></span>
-                  <span className="relative inline-flex rounded-full h-2 w-2 bg-[#27a644]"></span>
-                </span>
+                <Activity className="h-3.5 w-3.5 text-[#a5afff]" />
                 <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-[#a5afff]">
-                  Interactive Judge Demo · Step {tourStep + 1} of {TOUR_STEPS.length}
+                  Walkthrough Step {tourStep + 1} of {TOUR_STEPS.length}
                 </span>
-                <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-[#5e6ad2]/20 text-[#c7d2fe] border border-[#5e6ad2]/30">
+                <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-[#5e6ad2]/20 text-[#c7d2fe] border border-[#5e6ad2]/30">
                   {TOUR_STEPS[tourStep].badge}
                 </span>
               </div>
@@ -1825,8 +1806,8 @@ export default function App() {
 
             {/* Title & Description Bubble */}
             <div>
-              <h4 className="text-sm font-bold text-white flex items-center gap-1.5">
-                <Sparkles className="h-3.5 w-3.5 text-[#fbbf24] fill-current" />
+              <h4 className="text-sm font-semibold text-white flex items-center gap-1.5">
+                <Terminal className="h-3.5 w-3.5 text-[#5e6ad2]" />
                 <span>{TOUR_STEPS[tourStep].title}</span>
               </h4>
               <p className="text-xs text-[#d0d6e0] leading-relaxed mt-1">
@@ -1868,6 +1849,7 @@ export default function App() {
         isOpen={showLiveStage}
         onClose={() => setShowLiveStage(false)}
         onComplete={() => fetchState()}
+        onNavigateTab={(view) => setActiveView(view)}
       />
     </div>
   );
