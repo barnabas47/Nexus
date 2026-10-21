@@ -6,9 +6,10 @@ import {
   DollarSign, FileText, Network, Server, Lock, Layers,
   ChevronRight, ArrowRight, CornerDownRight, Check, X, Shield, RefreshCw,
   Phone, Users, Plus, Trash2, Radio, Bell, Key, Sliders, CheckCircle2,
-  Pause, SkipForward, RotateCcw, Sparkles
+  Pause, SkipForward, RotateCcw, Sparkles, Terminal, Activity
 } from 'lucide-react';
 import { LiveAIInspector } from './components/ui/live-ai-inspector';
+import { LiveScenarioStage } from './components/ui/live-scenario-stage';
 
 interface TimelineEvent {
   event_id: string;
@@ -213,6 +214,9 @@ export default function App() {
   const [tieringOpt, setTieringOpt] = useState(true);
   const [maxTokensOpt, setMaxTokensOpt] = useState(350);
 
+  // Live Scenario Simulator Stage
+  const [showLiveStage, setShowLiveStage] = useState(false);
+
   // Guided Tour State Machine
   const [isTourActive, setIsTourActive] = useState(false);
   const [tourStep, setTourStep] = useState(0);
@@ -296,7 +300,7 @@ export default function App() {
   const advanceTourStep = async (nextIndex: number) => {
     if (nextIndex >= TOUR_STEPS.length) {
       setIsTourActive(false);
-      notify("🎉 Live Judge Walkthrough completed! You now have full manual control.");
+      notify("[COMPLETED] Live Autonomous Walkthrough finished. Manual control restored.");
       return;
     }
     const targetStep = TOUR_STEPS[nextIndex];
@@ -541,7 +545,7 @@ export default function App() {
       });
       if (res.ok) {
         const data = await res.json();
-        notify(`🚨 Alert dispatched to ${data.recipients_count} active on-call staff via SMS & WhatsApp!`);
+        notify(`[DISPATCHED] Alert sent to ${data.recipients_count} active on-call staff via SMS & WhatsApp.`);
         await fetchState();
       }
     } catch (err) {
@@ -773,20 +777,30 @@ export default function App() {
             title="Configure Live Anthropic / OpenAI Keys & Token Optimizer"
           >
             <Key className="h-3.5 w-3.5 text-[#5e6ad2]" />
-            <span>{keySettings?.provider === 'anthropic' ? '⚡ Claude 3.5 Active' : keySettings?.provider === 'openai' ? '⚡ GPT-4o Active' : 'AI Engine (BYOK)'}</span>
+            <span>{keySettings?.provider === 'anthropic' ? '[LIVE] Claude 3.5 Active' : keySettings?.provider === 'openai' ? '[LIVE] GPT-4o Active' : 'AI Engine (BYOK)'}</span>
+          </button>
+
+          <button
+            onClick={() => setShowLiveStage(true)}
+            className="inline-flex items-center gap-1.5 rounded px-2.5 py-1 text-xs font-mono font-medium text-white transition-all bg-[#1e293b] hover:bg-[#334155] border border-white/[0.12] shadow-sm active:scale-[0.98]"
+            title="Launch Interactive Omnichannel Incident Simulator"
+          >
+            <Terminal className="h-3.5 w-3.5 text-[#38bdf8]" />
+            <span>Interactive Simulator</span>
           </button>
 
           <button
             onClick={startGuidedTour}
             disabled={isLoading}
-            className={`inline-flex items-center gap-1.5 rounded px-2.5 py-1 text-xs font-semibold text-white transition-all shadow-md active:scale-[0.98] ${
+            className={`inline-flex items-center gap-1.5 rounded px-2.5 py-1 text-xs font-mono font-medium text-white transition-all border ${
               isTourActive
-                ? 'bg-[#27a644] animate-pulse'
-                : 'bg-gradient-to-r from-[#5e6ad2] to-[#8b5cf6] hover:from-[#6b77e5] hover:to-[#9a6eff]'
+                ? 'border-[#10b981]/50 bg-[#10b981]/20 text-[#6ee7b7] animate-pulse'
+                : 'border-white/[0.1] bg-white/[0.04] hover:bg-white/[0.08] text-[#cbd5e1]'
             }`}
+            title="Automated Walkthrough Tour"
           >
-            <Sparkles className="h-3.5 w-3.5 fill-current" />
-            <span>{isTourActive ? 'Tour Playing...' : 'Judge Demo Tour'}</span>
+            <Activity className="h-3.5 w-3.5" />
+            <span>{isTourActive ? 'Tour Active' : 'Quick Walkthrough'}</span>
           </button>
 
           <button
@@ -1128,7 +1142,7 @@ export default function App() {
                   {lastExecutedPlaybook ? (
                     <div className="space-y-2 font-mono text-xs">
                       <div className="p-2 rounded bg-[#27a644]/10 border border-[#27a644]/30 text-[#6ee7b7]">
-                        ✓ {lastExecutedPlaybook.playbook_title} completed successfully.
+                        [RESOLVED] {lastExecutedPlaybook.playbook_title} completed successfully.
                       </div>
                       <div className="space-y-1.5 pl-2 border-l-2 border-[#5e6ad2]">
                         {lastExecutedPlaybook.steps_executed.map((st: string, idx: number) => (
@@ -1765,8 +1779,9 @@ export default function App() {
 
             {/* Bottom Controls */}
             <div className="flex items-center justify-between pt-2 border-t border-white/10 text-xs">
-              <span className="text-[10px] font-mono text-[#67e8f9] animate-pulse truncate max-w-[260px]">
-                ⚡ {TOUR_STEPS[tourStep].actionName}
+              <span className="text-[10px] font-mono text-[#67e8f9] animate-pulse truncate max-w-[260px] flex items-center gap-1">
+                <Activity className="h-3 w-3 inline text-[#38bdf8]" />
+                <span>{TOUR_STEPS[tourStep].actionName}</span>
               </span>
 
               <div className="flex items-center gap-1.5">
@@ -1790,6 +1805,13 @@ export default function App() {
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* 5. Live Omnichannel WhatsApp & Incident Reactor Simulator */}
+      <LiveScenarioStage
+        isOpen={showLiveStage}
+        onClose={() => setShowLiveStage(false)}
+        onComplete={() => fetchState()}
+      />
     </div>
   );
 }
