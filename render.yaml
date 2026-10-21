@@ -1,0 +1,16 @@
+services:
+  - type: web
+    name: nexus-enterprise-platform
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    plan: free
+    region: frankfurt
+    autoDeploy: true
+    healthCheckPath: /api/health
+    envVars:
+      - key: WHATSAPP_VERIFY_TOKEN
+        value: nexus_webhook_token_2026
+      - key: AWS_REGION
+        value: us-east-1
+      - key: PYTHONUNBUFFERED
+        value: "1"
