@@ -1,0 +1,204 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 420" width="100%" height="100%">
+  <defs>
+    <!-- Background Gradient -->
+    <linearGradient id="nexusBg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#04060a" />
+      <stop offset="50%" stop-color="#080c18" />
+      <stop offset="100%" stop-color="#05070d" />
+    </linearGradient>
+
+    <!-- Aurora Violet-Cyan Gradient -->
+    <linearGradient id="auroraGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#00f2fe" />
+      <stop offset="45%" stop-color="#4facfe" />
+      <stop offset="80%" stop-color="#7f00ff" />
+      <stop offset="100%" stop-color="#e0c3fc" />
+    </linearGradient>
+
+    <radialGradient id="centerOrbNexus" cx="50%" cy="42%" r="55%">
+      <stop offset="0%" stop-color="#7f00ff" stop-opacity="0.22" />
+      <stop offset="45%" stop-color="#00f2fe" stop-opacity="0.10" />
+      <stop offset="100%" stop-color="#04060a" stop-opacity="0" />
+    </radialGradient>
+
+    <!-- Glow Filters -->
+    <filter id="nexusGlow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="6" result="blur" />
+      <feMerge>
+        <feMergeNode in="blur" />
+        <feMergeNode in="SourceGraphic" />
+      </feMerge>
+    </filter>
+
+    <filter id="softGlowNexus" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="3.5" result="blur" />
+      <feMerge>
+        <feMergeNode in="blur" />
+        <feMergeNode in="SourceGraphic" />
+      </feMerge>
+    </filter>
+
+    <style>
+      @keyframes pulseGlowNexus {
+        0%, 100% { opacity: 0.18; transform: scale(1); }
+        50% { opacity: 0.32; transform: scale(1.05); }
+      }
+      @keyframes floatNexus {
+        0%, 100% { transform: translateY(0px); }
+        50% { transform: translateY(-7px); }
+      }
+      @keyframes orbitRotate {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+      }
+      @keyframes dashFlowNexus {
+        0% { stroke-dashoffset: 160; }
+        100% { stroke-dashoffset: 0; }
+      }
+      @keyframes blinkCursorNexus {
+        0%, 49% { opacity: 1; }
+        50%, 100% { opacity: 0; }
+      }
+      @keyframes nodePulseNexus {
+        0%, 100% { r: 3.5; opacity: 0.7; }
+        50% { r: 5.5; opacity: 1; }
+      }
+
+      .bg-orb-nexus {
+        transform-origin: 600px 180px;
+        animation: pulseGlowNexus 5s ease-in-out infinite;
+      }
+      .floating-title {
+        animation: floatNexus 5.5s ease-in-out infinite;
+      }
+      .orbit-ring {
+        transform-origin: 600px 160px;
+        animation: orbitRotate 30s linear infinite;
+      }
+      .circuit-flow {
+        stroke-dasharray: 6 5;
+        animation: dashFlowNexus 16s linear infinite;
+      }
+      .cursor-blink {
+        animation: blinkCursorNexus 1.1s infinite;
+      }
+      .pulsing-node {
+        animation: nodePulseNexus 3.5s ease-in-out infinite;
+      }
+    </style>
+  </defs>
+
+  <!-- Background -->
+  <rect width="1200" height="420" fill="url(#nexusBg)" />
+
+  <!-- Ambient Orb Glow -->
+  <circle class="bg-orb-nexus" cx="600" cy="170" r="340" fill="url(#centerOrbNexus)" />
+
+  <!-- Structural Grid -->
+  <g opacity="0.10" stroke="#4facfe" stroke-width="0.75">
+    <line x1="80" y1="0" x2="80" y2="420" />
+    <line x1="220" y1="0" x2="220" y2="420" />
+    <line x1="380" y1="0" x2="380" y2="420" />
+    <line x1="520" y1="0" x2="520" y2="420" />
+    <line x1="680" y1="0" x2="680" y2="420" />
+    <line x1="820" y1="0" x2="820" y2="420" />
+    <line x1="980" y1="0" x2="980" y2="420" />
+    <line x1="1120" y1="0" x2="1120" y2="420" />
+
+    <line x1="0" y1="65" x2="1200" y2="65" />
+    <line x1="0" y1="135" x2="1200" y2="135" />
+    <line x1="0" y1="205" x2="1200" y2="205" />
+    <line x1="0" y1="275" x2="1200" y2="275" />
+    <line x1="0" y1="345" x2="1200" y2="345" />
+  </g>
+
+  <!-- Orbital Ring around Center -->
+  <g class="orbit-ring">
+    <ellipse cx="600" cy="160" rx="380" ry="85" fill="none" stroke="#7f00ff" stroke-width="1" stroke-opacity="0.35" stroke-dasharray="8 6" />
+    <circle cx="220" cy="160" r="4.5" fill="#00f2fe" filter="url(#softGlowNexus)" />
+    <circle cx="980" cy="160" r="4.5" fill="#e0c3fc" filter="url(#softGlowNexus)" />
+  </g>
+
+  <!-- Flow Circuits -->
+  <g opacity="0.4" fill="none" stroke="#00f2fe" stroke-width="1.2">
+    <path class="circuit-flow" d="M 120 205 L 260 205 L 340 135 L 500 135" />
+    <path class="circuit-flow" d="M 700 135 L 860 135 L 940 205 L 1080 205" />
+    <path class="circuit-flow" d="M 260 205 L 340 275 L 500 275" />
+    <path class="circuit-flow" d="M 700 275 L 860 275 L 940 205" />
+  </g>
+
+  <!-- Pulsing Nodes -->
+  <circle class="pulsing-node" cx="260" cy="205" fill="#00f2fe" filter="url(#softGlowNexus)" />
+  <circle class="pulsing-node" cx="500" cy="135" fill="#7f00ff" filter="url(#softGlowNexus)" />
+  <circle class="pulsing-node" cx="700" cy="135" fill="#7f00ff" filter="url(#softGlowNexus)" />
+  <circle class="pulsing-node" cx="500" cy="275" fill="#4facfe" filter="url(#softGlowNexus)" />
+  <circle class="pulsing-node" cx="700" cy="275" fill="#4facfe" filter="url(#softGlowNexus)" />
+  <circle class="pulsing-node" cx="940" cy="205" fill="#e0c3fc" filter="url(#softGlowNexus)" />
+
+  <!-- Top Category Pill -->
+  <g transform="translate(600, 50)">
+    <rect x="-260" y="-14" width="520" height="28" rx="14" fill="#0b0e1b" stroke="#7f00ff" stroke-width="1" stroke-opacity="0.4" />
+    <circle cx="-238" cy="0" r="4" fill="#00f2fe" />
+    <text x="-222" y="4" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="11" font-weight="600" fill="#00f2fe" letter-spacing="1.5">
+      ENTERPRISE AUTONOMOUS MULTI-AGENT MISSION CONTROL
+    </text>
+  </g>
+
+  <!-- Central Title & Brand -->
+  <g class="floating-title" transform="translate(600, 155)">
+    <text text-anchor="middle" y="0" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="54" font-weight="800" fill="#ffffff" letter-spacing="-1.5">
+      Nexus<tspan fill="url(#auroraGrad)">AI</tspan>
+    </text>
+    <text text-anchor="middle" y="42" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="16" font-weight="400" fill="#94a3b8" letter-spacing="0.2">
+      Blind Consensus Orchestration &amp; Omnichannel Cryptographic Incident Response
+    </text>
+  </g>
+
+  <!-- Architecture Bento Pills -->
+  <g transform="translate(600, 270)">
+    <!-- Pill 1: Multi-Agent Blind Consensus -->
+    <g transform="translate(-360, 0)">
+      <rect x="-85" y="-18" width="170" height="36" rx="8" fill="#0a0d1a" stroke="#1e293b" stroke-width="1" />
+      <circle cx="-65" cy="0" r="3" fill="#7f00ff" />
+      <text x="-52" y="4" font-family="monospace" font-size="11" font-weight="600" fill="#e2e8f0">
+        Blind Consensus
+      </text>
+    </g>
+
+    <!-- Pill 2: A2A JSON-RPC Protocol -->
+    <g transform="translate(-120, 0)">
+      <rect x="-85" y="-18" width="170" height="36" rx="8" fill="#0a0d1a" stroke="#1e293b" stroke-width="1" />
+      <circle cx="-65" cy="0" r="3" fill="#00f2fe" />
+      <text x="-52" y="4" font-family="monospace" font-size="11" font-weight="600" fill="#e2e8f0">
+        A2A JSON-RPC
+      </text>
+    </g>
+
+    <!-- Pill 3: Deterministic Code Gates -->
+    <g transform="translate(120, 0)">
+      <rect x="-85" y="-18" width="170" height="36" rx="8" fill="#0a0d1a" stroke="#1e293b" stroke-width="1" />
+      <circle cx="-65" cy="0" r="3" fill="#4facfe" />
+      <text x="-52" y="4" font-family="monospace" font-size="11" font-weight="600" fill="#e2e8f0">
+        Deterministic Gates
+      </text>
+    </g>
+
+    <!-- Pill 4: SHA-256 Audit Ledger -->
+    <g transform="translate(360, 0)">
+      <rect x="-85" y="-18" width="170" height="36" rx="8" fill="#0a0d1a" stroke="#1e293b" stroke-width="1" />
+      <circle cx="-65" cy="0" r="3" fill="#10b981" />
+      <text x="-52" y="4" font-family="monospace" font-size="11" font-weight="600" fill="#e2e8f0">
+        SHA-256 Ledger
+      </text>
+    </g>
+  </g>
+
+  <!-- Bottom Terminal Ticker -->
+  <g transform="translate(600, 360)">
+    <rect x="-440" y="-16" width="880" height="32" rx="6" fill="#050811" stroke="#0f172a" stroke-width="1" />
+    <text x="-415" y="4" font-family="monospace" font-size="11" fill="#64748b">
+      <tspan fill="#10b981">LIVE</tspan> · OMNICHANNEL_TELEMETRY: [WHATSAPP + RCS + SMS + SES] → CONSENSUS_VERIFIED (0.942) · LEDGER_HASH: #sha256:7f9a2b
+      <tspan class="cursor-blink" fill="#00f2fe"> ▋</tspan>
+    </text>
+  </g>
+</svg>
