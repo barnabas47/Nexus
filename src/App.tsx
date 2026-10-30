@@ -6,10 +6,11 @@ import {
   DollarSign, FileText, Network, Server, Lock, Layers,
   ChevronRight, ArrowRight, CornerDownRight, Check, X, Shield, RefreshCw,
   Phone, Users, Plus, Trash2, Radio, Bell, Key, Sliders, CheckCircle2,
-  Pause, SkipForward, RotateCcw, Sparkles, Terminal, Activity, ChevronDown
+  Pause, SkipForward, RotateCcw, Sparkles, Terminal, Activity, ChevronDown, Compass
 } from 'lucide-react';
 import { LiveAIInspector } from './components/ui/live-ai-inspector';
 import { LiveScenarioStage } from './components/ui/live-scenario-stage';
+import { DirectorWalkthrough } from './components/ui/director-walkthrough';
 
 interface TimelineEvent {
   event_id: string;
@@ -647,11 +648,8 @@ export default function App() {
     }
   };
 
-  const handleSendMessage = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!inputText.trim()) return;
-    const textToSend = inputText;
-    setInputText('');
+  const sendMessageText = async (textToSend: string) => {
+    if (!textToSend.trim()) return;
     setLiveLatency(Math.floor(Math.random() * 20) + 28);
     try {
       const res = await fetch('/api/message', {
@@ -671,6 +669,14 @@ export default function App() {
     } catch (err) {
       console.error(err);
     }
+  };
+
+  const handleSendMessage = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!inputText.trim()) return;
+    const textToSend = inputText;
+    setInputText('');
+    await sendMessageText(textToSend);
   };
 
   const handleOverturn = async (id: string) => {
@@ -759,29 +765,47 @@ export default function App() {
             </motion.span>
           )}
 
+          {/* One-Take Director Walkthrough — Autonomous Interactive Case Demo */}
+          <motion.button
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.97 }}
+            onClick={startGuidedTour}
+            className="inline-flex items-center gap-1.5 rounded-md px-2.5 py-1 text-xs font-mono font-medium border border-[#38bdf8]/35 bg-[#38bdf8]/10 hover:bg-[#38bdf8]/15 text-[#38bdf8] transition-colors"
+            title="Launch One-Take Autonomous Live Screencast Demo"
+          >
+            <Compass className="h-3.5 w-3.5" />
+            <span>One-Take Walkthrough</span>
+          </motion.button>
+
           {/* Interactive Simulator — Unified Clean Monochrome Style */}
-          <button
+          <motion.button
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.97 }}
             onClick={() => setShowLiveStage(true)}
             className="inline-flex items-center gap-1.5 rounded-md px-2.5 py-1 text-xs font-mono font-medium border border-[#2e3038] bg-[#121316] hover:bg-[#1a1b20] text-[#d0d6e0] transition-colors"
             title="Launch Interactive Omnichannel Incident Simulator"
           >
             <Terminal className="h-3.5 w-3.5 text-[#8a8f98]" />
             <span>Interactive Simulator</span>
-          </button>
+          </motion.button>
 
           {/* Choose AI Button */}
-          <button
+          <motion.button
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.97 }}
             onClick={() => setShowKeyModal(true)}
             className="inline-flex items-center gap-1.5 rounded-md px-2.5 py-1 text-xs font-mono font-medium border border-[#2e3038] bg-[#121316] hover:bg-[#1a1b20] text-[#d0d6e0] transition-colors"
             title="Configure Live Anthropic / OpenAI Keys & Token Optimizer"
           >
             <Key className="h-3.5 w-3.5 text-[#8a8f98]" />
             <span>Choose AI</span>
-          </button>
+          </motion.button>
 
           {/* Scenarios & Tests Dropdown Menu */}
           <div className="relative">
-            <button
+            <motion.button
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.97 }}
               onClick={() => setShowActionsMenu(!showActionsMenu)}
               className="inline-flex items-center gap-1.5 rounded-md px-2.5 py-1 text-xs font-mono font-medium border border-[#2e3038] bg-[#121316] hover:bg-[#1a1b20] text-[#d0d6e0] transition-colors"
               title="Open Scenarios & Testing Suite"
@@ -789,7 +813,7 @@ export default function App() {
               <Activity className="h-3.5 w-3.5 text-[#8a8f98]" />
               <span>Scenarios & Tests</span>
               <ChevronDown className="h-3 w-3 text-[#8a8f98]" />
-            </button>
+            </motion.button>
 
             {showActionsMenu && (
               <div 
@@ -801,6 +825,17 @@ export default function App() {
                 </div>
 
                 <button
+                  onClick={() => { startGuidedTour(); setShowActionsMenu(false); }}
+                  className="w-full text-left px-3 py-2 hover:bg-[#16171d] text-white flex items-start gap-2.5 transition-colors"
+                >
+                  <Compass className="h-4 w-4 text-[#38bdf8] mt-0.5 flex-shrink-0" />
+                  <div>
+                    <div className="font-medium text-[12px] text-[#38bdf8]">One-Take Autonomous Walkthrough</div>
+                    <div className="text-[10px] text-[#8a8f98]">Live video-like case simulation with typing & camera motion</div>
+                  </div>
+                </button>
+
+                <button
                   onClick={() => { triggerJudgeDemo(); setShowActionsMenu(false); }}
                   className="w-full text-left px-3 py-2 hover:bg-[#16171d] text-white flex items-start gap-2.5 transition-colors"
                 >
@@ -808,17 +843,6 @@ export default function App() {
                   <div>
                     <div className="font-medium text-[12px]">1-Click Judge Demo</div>
                     <div className="text-[10px] text-[#8a8f98]">Synthesize 10-step full omnichannel journey</div>
-                  </div>
-                </button>
-
-                <button
-                  onClick={() => { startGuidedTour(); setShowActionsMenu(false); }}
-                  className="w-full text-left px-3 py-2 hover:bg-[#16171d] text-white flex items-start gap-2.5 transition-colors"
-                >
-                  <Activity className="h-4 w-4 text-[#38bdf8] mt-0.5 flex-shrink-0" />
-                  <div>
-                    <div className="font-medium text-[12px]">Guided Walkthrough Tour</div>
-                    <div className="text-[10px] text-[#8a8f98]">Interactive walkthrough highlighting key modules</div>
                   </div>
                 </button>
 
@@ -877,25 +901,33 @@ export default function App() {
               const Icon = item.icon;
               const isActive = activeView === item.id;
               return (
-                <button
+                <motion.button
                   key={item.id}
+                  whileTap={{ scale: 0.98 }}
                   onClick={() => setActiveView(item.id as any)}
-                  className={`w-full flex items-center justify-between px-2.5 py-1.5 rounded text-xs font-medium transition-colors ${
+                  className={`relative w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-xs font-medium transition-colors ${
                     isActive
-                      ? 'bg-[#18191c] text-[#f7f8f8] shadow-[inset_0_1px_0_rgba(255,255,255,0.05)] border border-[#2e3038]'
+                      ? 'text-[#f7f8f8]'
                       : 'text-[#8a8f98] hover:text-[#f7f8f8] hover:bg-[#0f1011]'
                   }`}
                 >
-                  <div className="flex items-center gap-2">
-                    <Icon className={`h-3.5 w-3.5 ${isActive ? 'text-[#5e6ad2]' : 'text-[#62666d]'}`} />
+                  {isActive && (
+                    <motion.div
+                      layoutId="activeNavIndicator"
+                      className="absolute inset-0 rounded-lg bg-[#18191c] border border-[#2e3038] shadow-[inset_0_1px_0_rgba(255,255,255,0.06)]"
+                      transition={{ type: "spring", stiffness: 450, damping: 35 }}
+                    />
+                  )}
+                  <div className="relative z-10 flex items-center gap-2">
+                    <Icon className={`h-3.5 w-3.5 transition-colors ${isActive ? 'text-[#5e6ad2]' : 'text-[#62666d]'}`} />
                     <span>{item.label}</span>
                   </div>
-                  <span className={`text-[10px] font-mono px-1.5 py-0.2 rounded ${
+                  <span className={`relative z-10 text-[10px] font-mono px-1.5 py-0.2 rounded transition-colors ${
                     isActive ? 'bg-[#5e6ad2]/20 text-[#a5afff]' : 'bg-[#141516] text-[#62666d]'
                   }`}>
                     {item.badge}
                   </span>
-                </button>
+                </motion.button>
               );
             })}
           </div>
@@ -948,6 +980,15 @@ export default function App() {
 
           {/* Dynamic Module Content View */}
           <div className="flex-1 overflow-hidden p-4">
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={activeView}
+                initial={{ opacity: 0, y: 8, scale: 0.995 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, y: -6, scale: 0.995 }}
+                transition={{ type: "spring", stiffness: 400, damping: 32 }}
+                className="h-full w-full overflow-hidden"
+              >
             
             {/* VIEW: ON-CALL ROSTER & VERIFIED NUMBERS */}
             {activeView === 'roster' && (
@@ -1525,6 +1566,8 @@ export default function App() {
                 </div>
               </div>
             )}
+              </motion.div>
+            </AnimatePresence>
           </div>
         </main>
 
@@ -1767,82 +1810,17 @@ export default function App() {
         )}
       </AnimatePresence>
 
-      {/* 4. Live Autonomous Judge Walkthrough Spotlight Bubble */}
-      <AnimatePresence>
-        {isTourActive && (
-          <motion.div
-            initial={{ opacity: 0, y: 35, scale: 0.95 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: 25, scale: 0.95 }}
-            className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 w-[580px] max-w-[95vw] rounded-2xl border border-[#5e6ad2]/60 bg-[#07080d]/95 backdrop-blur-2xl shadow-[0_16px_50px_rgba(94,106,210,0.4)] p-4 flex flex-col gap-2.5"
-          >
-            {/* Top Bar: Progress and Step Badge */}
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Activity className="h-3.5 w-3.5 text-[#a5afff]" />
-                <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-[#a5afff]">
-                  Walkthrough Step {tourStep + 1} of {TOUR_STEPS.length}
-                </span>
-                <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-[#5e6ad2]/20 text-[#c7d2fe] border border-[#5e6ad2]/30">
-                  {TOUR_STEPS[tourStep].badge}
-                </span>
-              </div>
-              <button
-                onClick={() => setIsTourActive(false)}
-                className="text-[#8a8f98] hover:text-white p-1 rounded transition-colors"
-                title="Exit Tour"
-              >
-                <X className="h-4 w-4" />
-              </button>
-            </div>
-
-            {/* Timer Progress Bar */}
-            <div className="h-1 w-full bg-white/10 rounded-full overflow-hidden">
-              <div
-                className="h-full bg-gradient-to-r from-[#5e6ad2] via-[#8b5cf6] to-[#27a644] transition-all duration-100 ease-linear"
-                style={{ width: `${tourTimerProgress}%` }}
-              />
-            </div>
-
-            {/* Title & Description Bubble */}
-            <div>
-              <h4 className="text-sm font-semibold text-white flex items-center gap-1.5">
-                <Terminal className="h-3.5 w-3.5 text-[#5e6ad2]" />
-                <span>{TOUR_STEPS[tourStep].title}</span>
-              </h4>
-              <p className="text-xs text-[#d0d6e0] leading-relaxed mt-1">
-                {TOUR_STEPS[tourStep].desc}
-              </p>
-            </div>
-
-            {/* Bottom Controls */}
-            <div className="flex items-center justify-between pt-2 border-t border-white/10 text-xs">
-              <span className="text-[10px] font-mono text-[#67e8f9] animate-pulse truncate max-w-[260px] flex items-center gap-1">
-                <Activity className="h-3 w-3 inline text-[#38bdf8]" />
-                <span>{TOUR_STEPS[tourStep].actionName}</span>
-              </span>
-
-              <div className="flex items-center gap-1.5">
-                <button
-                  onClick={() => setIsTourPaused(!isTourPaused)}
-                  className="px-2.5 py-1 rounded-md border border-[#2e3038] bg-[#14151b] hover:bg-[#1e2029] font-medium text-white flex items-center gap-1 transition-colors"
-                >
-                  {isTourPaused ? <Play className="h-3 w-3 fill-current" /> : <Pause className="h-3 w-3 fill-current" />}
-                  <span>{isTourPaused ? 'Resume' : 'Pause'}</span>
-                </button>
-
-                <button
-                  onClick={() => advanceTourStep(tourStep + 1)}
-                  className="px-3 py-1 rounded-md bg-[#5e6ad2] hover:bg-[#6875e5] font-semibold text-white flex items-center gap-1 transition-all shadow-sm active:scale-95"
-                >
-                  <span>{tourStep === TOUR_STEPS.length - 1 ? 'Finish' : 'Next Step'}</span>
-                  <SkipForward className="h-3 w-3 fill-current" />
-                </button>
-              </div>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+      {/* 4. One-Take Autonomous Director Walkthrough (Cinema Mode with Animated Virtual Cursor) */}
+      <DirectorWalkthrough
+        isActive={isTourActive}
+        onClose={() => setIsTourActive(false)}
+        activeView={activeView}
+        setActiveView={setActiveView}
+        onBroadcastAlert={handleBroadcastAlert}
+        onExecuteSignoff={executeSignoff}
+        onSendMessage={sendMessageText}
+        signoffCompleted={signoffCompleted}
+      />
 
       {/* 5. Live Omnichannel WhatsApp & Incident Reactor Simulator */}
       <LiveScenarioStage
